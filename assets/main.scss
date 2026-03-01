@@ -245,3 +245,37 @@ pre{
 @media (prefers-reduced-motion: reduce){
   #bg-glow{ display:none; }
 }
+
+
+
+/* ===== bg-glow visibility fix ===== */
+
+/* html/body のベタ塗りをやめて、背面レイヤーを見えるようにする */
+html, body{
+  background: transparent !important;
+}
+
+/* glow は「背面」だが「見える層」に置く */
+#bg-glow{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0 !important; /* -1 をやめる */
+}
+
+/* コンテンツは glow より前面に */
+.site-header,
+.page-content,
+.site-footer{
+  position: relative;
+  z-index: 1;
+}
+
+/* 背景色のベース（白っぽさ）を glow レイヤー側で担保 */
+#bg-glow::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: var(--bg);
+  z-index:-1;
+}
