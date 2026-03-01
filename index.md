@@ -2,6 +2,6 @@
 layout: home
 ---
 
-# reveries
+# Rêveries
 
-思考の記録。
+思考の記録
