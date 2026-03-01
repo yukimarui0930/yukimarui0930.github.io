@@ -1,0 +1,30 @@
+---
+---
+
+@import "minima";
+
+/* Google Font: Inter */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap");
+
+/* ===== フォント設計 ===== */
+
+/* 基本はInter */
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.85;
+  font-size: 16px;
+  font-weight:100;
+}
+
+/* 日本語だけ游ゴシック */
+:lang(ja) {
+  font-family: "Yu Gothic", "游ゴシック", "YuGothic",
+               "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+               "Meiryo", sans-serif;
+}
+
+/* 読みやすさ調整 */
+.wrapper {
+  max-width: 780px;
+  padding: 0 20px;
+}
