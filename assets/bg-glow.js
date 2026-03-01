@@ -69,7 +69,7 @@
       // Smaller k = less "snappy"
       // Higher damp = more inertia / drifting
       var k = 0.035; // spring strength
-      var damp = 0.93; // damping (higher = smoother/slower)
+      var damp = 1.93; // damping (higher = smoother/slower)
       var driftAmt = 0.035; // base organic drift amount
       var targetSmooth = 0.045; // smaller = floatier target, bigger = more responsive
 
