@@ -261,3 +261,33 @@ pre{
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+
+
+/* ===== Layers ===== */
+#bg-glow{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#bg-pattern-canvas{
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+
+  /* 白線を“紙っぽく”馴染ませる。不要なら消してOK */
+  mix-blend-mode: soft-light;
+  opacity: .22;
+}
+
+.site-header,
+.page-content,
+.site-footer{
+  position: relative;
+  z-index: 2;
+}
