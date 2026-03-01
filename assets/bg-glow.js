@@ -1,5 +1,5 @@
 // assets/bg-glow.js
-// Mouse-follow + organic drift chromeyellow glow
+// Mouse-follow + zero-gravity drift chromeyellow glow
 // - Always inserts #bg-glow
 // - If prefers-reduced-motion is ON, it still animates, but gently (animating-reduced)
 
@@ -48,33 +48,52 @@
 
       var isReduced = reduceMotionEnabled();
 
+      // ============
       // Target + state (0..1 normalized)
-      var tx = 0.55,
-        ty = 0.18;
+      //  - rawT*: pointer input
+      //  - t*: smoothed target (gives floaty feel)
+      // ============
+      var rawTx = 0.55,
+        rawTy = 0.18;
+      var tx = rawTx,
+        ty = rawTy;
+
       var x = tx,
         y = ty;
       var vx = 0,
         vy = 0;
 
-      // Tuning
-      // Normal: responsive + organic
-      var k = 0.10; // spring strength
-      var damp = 0.82; // damping (higher = smoother / slower)
-      var driftAmt = 0.03;
+      // ============
+      // Tuning (floaty / zero-gravity)
+      // ============
+      // Smaller k = less "snappy"
+      // Higher damp = more inertia / drifting
+      var k = 0.035; // spring strength
+      var damp = 0.93; // damping (higher = smoother/slower)
+      var driftAmt = 0.035; // base organic drift amount
+      var targetSmooth = 0.045; // smaller = floatier target, bigger = more responsive
 
       // Reduced motion: still animate but subtle
       if (isReduced) {
-        k = 0.035;
-        damp = 0.92;
-        driftAmt = 0.012;
-        document.documentElement.setAttribute("data-bg-glow", "animating-reduced");
+        k = 0.02;
+        damp = 0.95;
+        driftAmt = 0.015;
+        targetSmooth = 0.03;
+        document.documentElement.setAttribute(
+          "data-bg-glow",
+          "animating-reduced"
+        );
       } else {
         document.documentElement.setAttribute("data-bg-glow", "animating");
       }
 
+      function clamp01(v) {
+        return v < 0 ? 0 : v > 1 ? 1 : v;
+      }
+
       function setTarget(cx, cy) {
-        tx = Math.min(1, Math.max(0, cx / window.innerWidth));
-        ty = Math.min(1, Math.max(0, cy / window.innerHeight));
+        rawTx = clamp01(cx / window.innerWidth);
+        rawTy = clamp01(cy / window.innerHeight);
       }
 
       window.addEventListener(
@@ -95,7 +114,11 @@
       );
 
       function tick(now) {
-        // spring follow
+        // Smooth the target itself (key for "zero-gravity" feel)
+        tx += (rawTx - tx) * targetSmooth;
+        ty += (rawTy - ty) * targetSmooth;
+
+        // spring follow (2nd order dynamics)
         vx += (tx - x) * k;
         vy += (ty - y) * k;
         vx *= damp;
