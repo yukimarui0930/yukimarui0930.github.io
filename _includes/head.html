@@ -13,5 +13,46 @@
   <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
   <link type="application/atom+xml" rel="alternate" href="{{ '/feed.xml' | relative_url }}" title="{{ site.title }}">
 
-<script defer src="{{ '/assets/bg-glow.js?v=20260301' | relative_url }}"></script>
+<script>
+(function () {
+  try {
+    document.documentElement.setAttribute("data-bg-glow", "loaded");
+
+    function run() {
+      document.documentElement.setAttribute("data-bg-glow", "run");
+
+      if (!document.body) { setTimeout(run, 0); return; }
+
+      if (!document.getElementById("bg-glow")) {
+        var el = document.createElement("div");
+        el.id = "bg-glow";
+        el.setAttribute("aria-hidden", "true");
+        document.body.insertBefore(el, document.body.firstChild);
+      }
+
+      document.documentElement.setAttribute("data-bg-glow", "inserted");
+
+      var root = document.documentElement.style;
+      root.setProperty("--bgx1", "55%");
+      root.setProperty("--bgy1", "18%");
+      root.setProperty("--bgx2", "70%");
+      root.setProperty("--bgy2", "28%");
+      root.setProperty("--bgx3", "42%");
+      root.setProperty("--bgy3", "30%");
+
+      // ここまで来れば「表示自体」は必ずできています
+      // （あとはCSS側の #bg-glow が効いていればOK）
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", run, { once: true });
+    } else {
+      run();
+    }
+  } catch (e) {
+    document.documentElement.setAttribute("data-bg-glow", "error");
+    console.error("[bg-glow] error", e);
+  }
+})();
+</script>
 </head>
