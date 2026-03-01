@@ -128,7 +128,12 @@ p{ margin-bottom: 18px; }
 }
 
 /* リンク */
-a, a:visited{
+a{
+  color:#000 !important;
+  text-decoration: none;
+  border-bottom: 0;
+}
+a:visited{
   color:#000 !important;
   text-decoration: none;
   border-bottom: 0;
