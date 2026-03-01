@@ -7,7 +7,6 @@
 
 /* 基本はInter */
 
-/* 基本：Inter（英字） + 日本語は自動フォールバック */
 body{
   font-family:
     "Inter",
@@ -22,18 +21,10 @@ body{
   font-weight: 100;
 }
 
-/* タイトルも同様 */
 .site-title{
-  font-family:
-    "Inter",
-    "Yu Gothic", "游ゴシック", "YuGothic",
-    "Hiragino Sans", "Hiragino Kaku Gothic ProN",
-    "Meiryo",
-    -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-
-  font-size: 35px;
-  font-weight: 200; /* 250は中途半端なので200/300推奨 */
+  font-family: inherit;
+  font-size: 30px;
+  font-weight: 300 !important;
 }
 
 /* 読みやすさ調整 */
