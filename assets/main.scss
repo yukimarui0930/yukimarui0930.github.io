@@ -4,7 +4,7 @@
 @import "minima";
 
 /* =======================================
-   Design tokens
+   Design tokens + bg-glow positions
    ======================================= */
 :root{
   --bg: #fcfcfb;
@@ -12,6 +12,11 @@
   --muted: rgba(17,17,17,.55);
   --line: rgba(17,17,17,.10);
   --max: 820px;
+
+  /* bg-glow: 初期位置（JSが更新） */
+  --bgx1: 55%; --bgy1: 18%;
+  --bgx2: 70%; --bgy2: 28%;
+  --bgx3: 42%; --bgy3: 30%;
 }
 
 /* =======================================
@@ -29,7 +34,9 @@ body{
     sans-serif;
 
   color: var(--text);
-  background: var(--bg);
+
+  /* 重要：bodyを透明にして bg-glow を見せる */
+  background: transparent;
 
   font-size: 16px;
   font-weight: 100;
@@ -56,7 +63,7 @@ hr{ border: 0; height: 0; }
 .site-header{
   background: rgba(252,252,251,.85);
   backdrop-filter: blur(6px);
-  padding-top:48px;
+  padding-top: 48px;
 }
 
 .site-title{
@@ -79,7 +86,7 @@ hr{ border: 0; height: 0; }
    Spacing (Top)
    ======================================= */
 .page-content{
-  padding-top: 90px;     /* 上の余白：ここが主調整 */
+  padding-top: 90px;
   padding-bottom: 60px;
 }
 
@@ -119,7 +126,7 @@ p{ margin-bottom: 18px; }
   font-weight: 200;
 }
 
-/* リンク：横罫線に見えないようにする */
+/* リンク */
 a{
   color: var(--text);
   text-decoration: none;
@@ -138,15 +145,12 @@ a:hover{
   margin-left: 0;
   padding-left: 0;
 }
-
 .post-item{
   list-style: none;
   padding: 18px 0;
   border-bottom: 0;
 }
-
 .post-title-line{ margin: 6px 0 0; }
-
 .post-link{
   display: inline;
   font-size: 18px;
@@ -180,41 +184,36 @@ pre{
   padding: 28px 0;
   color: var(--muted);
 }
-
 .footer-heading{
   font-weight: 200;
   color: var(--text);
 }
 
-
-
 /* =======================================
    Mouse-follow chromeyellow glow (background)
    ======================================= */
 
-/* 初期値（JSが動くまでの位置） */
-:root{
-  --bgx1: 55%;
-  --bgy1: 18%;
-  --bgx2: 70%;
-  --bgy2: 28%;
-  --bgx3: 42%;
-  --bgy3: 30%;
-}
-
-/* 背景レイヤー（JSが body 先頭に差し込みます） */
+/* glowはコンテンツの背面、html背景の前面 */
 #bg-glow{
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: -1;          /* 背面 */
+  z-index: 0;
 }
 
-/* ブロブ本体：クロムイエローを“ほのかに” */
+/* コンテンツは glow より前 */
+.site-header,
+.page-content,
+.site-footer{
+  position: relative;
+  z-index: 1;
+}
+
+/* ブロブ本体 */
 #bg-glow::before{
   content: "";
   position: absolute;
-  inset: -10%;          /* 端の途切れ防止 */
+  inset: -10%;
   background:
     radial-gradient(800px 600px at var(--bgx1) var(--bgy1),
       rgba(255, 183, 0, .22) 0%,
@@ -233,7 +232,6 @@ pre{
   transform: translate3d(0,0,0);
 }
 
-/* モバイルは控えめに */
 @media (max-width: 600px){
   #bg-glow::before{
     filter: blur(26px) saturate(110%);
@@ -241,56 +239,7 @@ pre{
   }
 }
 
-/* 動きを嫌う設定ならオフ（JSも止めているが念のため） */
+/* Reduce motion は「消す」ではなく「薄く固定」にする */
 @media (prefers-reduced-motion: reduce){
-  #bg-glow{ display:none; }
-}
-
-
-
-/* ===== bg-glow visibility fix ===== */
-
-/* html/body のベタ塗りをやめて、背面レイヤーを見えるようにする */
-html, body{
-  background: transparent !important;
-}
-
-/* glow は「背面」だが「見える層」に置く */
-#bg-glow{
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0 !important; /* -1 をやめる */
-}
-
-/* コンテンツは glow より前面に */
-.site-header,
-.page-content,
-.site-footer{
-  position: relative;
-  z-index: 1;
-}
-
-/* 背景色のベース（白っぽさ）を glow レイヤー側で担保 */
-#bg-glow::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: var(--bg);
-  z-index:-1;
-}
-
-/* bg-glow レイヤー：見える & コンテンツの背面 */
-body{ background: transparent; } /* htmlの背景色はそのまま使う */
-
-#bg-glow{
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.site-header, .page-content, .site-footer{
-  position: relative;
-  z-index: 1;
+  #bg-glow::before{ opacity: .35; }
 }
