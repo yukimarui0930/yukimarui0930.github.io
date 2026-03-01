@@ -4,6 +4,9 @@
 @import "minima";
 
 /* ここから自分のデザイン */
+body {
+  font-family: 'Inter', sans-serif;
+}
 .site-title { font-weight: 100;}
 .post-content { line-height: 1.9; font-size: 17px; }
 .wrapper { max-width: 1000px; } /* 本文幅 */
