@@ -97,15 +97,44 @@ p{
   margin-bottom: 18px;
 }
 
-/* リンクを“青”から脱却 */
+
+
+/* 罫線（ボーダー）を消す/薄くする */
+.site-header{ border-bottom: 0 !important; }
+.site-footer{ border-top: 0 !important; }
+hr{ border: 0; height: 0; }
+
+/* リンク下の“横線”をやめる */
 a{
-  color: var(--accent);
+  color: var(--text);
   text-decoration: none;
-  border-bottom: 1px solid rgba(17,17,17,.25);
+  border-bottom: 0;
 }
 a:hover{
-  border-bottom-color: rgba(17,17,17,.55);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
+
+/* トップの投稿リストを整える */
+.post-list{ margin-left: 0; padding-left: 0; }
+.post-item{
+  list-style: none;
+  padding: 18px 0;
+  border-bottom: 0; /* 仕切り線も不要なら0 */
+}
+.post-title-line{ margin: 6px 0 0; }
+.post-link{
+  display: inline; /* blockをやめると“横線感”が出ない */
+  font-size: 18px;
+  font-weight: 300;
+}
+.post-meta{
+  color: var(--muted);
+  font-weight: 200;
+}
+
+
 
 /* 引用をスタイリッシュに */
 blockquote{
