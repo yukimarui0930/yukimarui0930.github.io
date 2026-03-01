@@ -1,16 +1,15 @@
 // assets/bg-pattern.js
-// Woven ribbon pattern (true over/under illusion) on canvas.
+// Woven 45° ribbon pattern (white, opaque) on canvas.
 // Stack: glow(z0) < pattern(z1) < content(z2)
-// - Static (draw once + resize)
-// - Lines are pure white (#fff) and fully opaque
-// - Weave is made by cutting "under" strokes at crossings, then drawing "over" on top.
+// Static: draw once + on resize
+// Lines: #fff, fully opaque
 
 (function () {
   try {
     function run() {
       if (!document.body) return void setTimeout(run, 0);
 
-      // Ensure canvas
+      // Canvas
       var canvas = document.getElementById("bg-pattern-canvas");
       if (!canvas) {
         canvas = document.createElement("canvas");
@@ -19,7 +18,7 @@
         document.body.insertBefore(canvas, document.body.firstChild);
       }
 
-      // Force fixed layer styles
+      // Force fixed layer styles (guarantee stack + no layout participation)
       var st = canvas.style;
       st.position = "fixed";
       st.inset = "0";
@@ -31,7 +30,7 @@
       st.display = "block";
       st.mixBlendMode = "normal";
 
-      // Enforce content z=2 (guarantees stack)
+      // Force content to z=2
       try {
         [".site-header", ".page-content", ".site-footer"].forEach(function (sel) {
           var el = document.querySelector(sel);
@@ -45,21 +44,22 @@
       var ctx = canvas.getContext("2d", { alpha: true });
 
       // ==========================
-      // TUNING (壁紙寄せ)
+      // TUNING (ここだけで見た目を追い込める)
       // ==========================
-      var TILE = 320;   // 280〜380
-      var ANG = Math.PI / 4; // 45deg
-      var LINE = 1.35;  // 線幅
-      var RAILS = 4;    // 平行線本数
-      var GAP = 10;     // 平行線間隔
-      var R = 48;       // 角R（丸み）
+      var TILE = 360;      // 模様の大きさ（300〜420）
+      var ANG = Math.PI/4; // 45°
+      var R = 54;          // 角の丸み（48〜70）
+      var RAILS = 4;       // 平行線本数（3〜5）
+      var GAP = 9.5;       // 平行線間隔（8〜12）
+      var LINE = 1.25;     // 線幅（1.1〜1.6）
 
-      // “編み込みの欠け”のサイズ
-      var CUT_LEN = 26;   // 交差点で欠ける長さ（20〜34）
-      var CUT_W = 9;      // 欠ける太さ（LINEより太くする）
+      // 編み込みの「欠け」サイズ（下側を切る）
+      var CUT_LEN = 26;    // 欠け長
+      var CUT_W   = 10;    // 欠け太さ（LINEより太く）
 
-      // 参考画像のように、帯は「水平/垂直（回転座標）」の折れ線＋丸角で作る。
-      // これを2系統（A/B）描き、交差点で上下を交互にする。
+      // 補助の縦罫（壁紙の細い縦線っぽい）
+      var UPRIGHT = true;
+      var UPRIGHT_X = [0.28, 0.72]; // タイル内の縦線位置
 
       function resizeCanvas() {
         var dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -71,130 +71,78 @@
         draw();
       }
 
-      // ---------- Geometry in rotated space ----------
-      // One “lane” is built from axis-aligned segments in rotated coordinates:
-      // (x0,y0)->(x1,y0)->(x1,y1)->(x2,y1)->(x2,y2)->(x3,y2)
-      function strokeLane(offsetY, phase) {
-        // phase shifts the lane so it interlocks like wallpaper
-        var x0 = -TILE * 0.40;
-        var x1 = TILE * (0.35 + phase);
-        var x2 = TILE * (0.70 + phase);
-        var x3 = TILE * 1.40;
+      // ---- core ribbon stroke in rotated coordinates ----
+      // This produces the “folded ribbon” feel: straight, straight, straight with rounded corners.
+      function strokeRibbonPath(phaseY) {
+        // Coordinates in rotated space (tile-local).
+        // This path continues beyond tile bounds so tiling looks continuous.
+        var W = TILE;
+        var x0 = -W * 0.40;
+        var x1 =  W * 0.20;
+        var x2 =  W * 0.55;
+        var x3 =  W * 0.90;
+        var x4 =  W * 1.30;
 
-        var y0 = TILE * (0.18 + offsetY);
-        var y1 = TILE * (0.52 + offsetY);
-        var y2 = TILE * (0.86 + offsetY);
+        var y0 =  W * (0.18 + phaseY);
+        var y1 =  W * (0.18 + phaseY);
+        var y2 =  W * (0.52 + phaseY);
+        var y3 =  W * (0.52 + phaseY);
+        var y4 =  W * (0.86 + phaseY);
 
         ctx.beginPath();
         ctx.moveTo(x0, y0);
 
-        ctx.lineTo(x1 - R, y0);
-        ctx.arcTo(x1, y0, x1, y0 + R, R);
-
-        ctx.lineTo(x1, y1 - R);
-        ctx.arcTo(x1, y1, x1 + R, y1, R);
-
         ctx.lineTo(x2 - R, y1);
-        ctx.arcTo(x2, y1, x2, y1 + R, R);
+        ctx.arcTo(x2, y1, x2, y2, R);
 
-        ctx.lineTo(x2, y2 - R);
-        ctx.arcTo(x2, y2, x2 + R, y2, R);
+        ctx.lineTo(x2, y3 - R);
+        ctx.arcTo(x2, y3, x3, y3, R);
 
-        ctx.lineTo(x3, y2);
+        ctx.lineTo(x3 + (x4 - x3), y4); // out
         ctx.stroke();
+      }
 
-        // Return nominal crossing points (approx centers of the “vertical drops”)
-        // We'll use these to cut under-strokes.
+      // For weave: define “knot centers” in rotated coords where crossings visually happen.
+      // These are tuned to the path above and look like wallpaper knots.
+      function getKnots() {
         return [
-          { x: x1, y: y1, dir: "v" }, // around first vertical segment
-          { x: x2, y: y2, dir: "v" }  // around second vertical segment
+          // around the first corner block
+          { x: TILE * 0.55, y: TILE * 0.52, dir: "v" },
+          // around the second block (slightly lower)
+          { x: TILE * 0.72, y: TILE * 0.86, dir: "h" },
+          // helper knots for stronger weave impression
+          { x: TILE * 0.38, y: TILE * 0.18, dir: "h" },
+          { x: TILE * 0.22, y: TILE * 0.70, dir: "v" }
         ];
       }
 
-      // helper: draw a tile in rotated space
-      function drawTile(tx, ty, tileI, tileJ) {
-        ctx.save();
-        ctx.translate(tx + TILE * 0.5, ty + TILE * 0.5);
-        ctx.rotate(ANG);
-        ctx.translate(-TILE * 0.5, -TILE * 0.5);
-
-        // Two families A/B.
-        // A: phase 0.00, B: phase -0.18 (slight shift to create interlock)
-        // We will weave by cutting UNDER at “crossings” and drawing OVER last.
-        var crossings = [];
-
-        // Collect crossings for each rail/each family.
-        for (var k = 0; k < RAILS; k++) {
-          var o = (k - (RAILS - 1) / 2) * (GAP / TILE); // normalize to tile fraction
-          // family A
-          crossings.push({ fam: "A", rail: k, pts: strokeLane(o, 0.00) });
-          // family B
-          crossings.push({ fam: "B", rail: k, pts: strokeLane(o - 0.34, -0.18) });
+      function drawFamily(phaseBase) {
+        // multiple parallel rails
+        for (var i = 0; i < RAILS; i++) {
+          var o = (i - (RAILS - 1) / 2) * GAP;
+          // convert px offset to rotated-space fraction of tile
+          strokeRibbonPath(phaseBase + (o / TILE));
         }
-
-        ctx.restore();
       }
 
-      // We can't easily “intersect” analytically without heavy math,
-      // so we create a convincing weave by cutting the UNDER family
-      // at deterministic “knot positions” (near the vertical drops).
-      //
-      // Strategy per tile:
-      // 1) Decide over/under by checkerboard: (tileX + tileY) parity
-      // 2) Draw UNDER family fully
-      // 3) Cut small gaps in UNDER at knot positions
-      // 4) Draw OVER family fully
+      function cutUnderAtKnots() {
+        var knots = getKnots();
 
-      function drawTileWeave(tx, ty, tileX, tileY) {
-        ctx.save();
-        ctx.translate(tx + TILE * 0.5, ty + TILE * 0.5);
-        ctx.rotate(ANG);
-        ctx.translate(-TILE * 0.5, -TILE * 0.5);
-
-        var overIsA = ((tileX + tileY) % 2 === 0); // checkerboard
-
-        function drawFamily(fam) {
-          for (var k = 0; k < RAILS; k++) {
-            var o = (k - (RAILS - 1) / 2) * (GAP / TILE);
-            if (fam === "A") {
-              strokeLane(o, 0.00);
-            } else {
-              strokeLane(o - 0.34, -0.18);
-            }
-          }
-        }
-
-        // 1) UNDER draw
-        drawFamily(overIsA ? "B" : "A");
-
-        // 2) Cut UNDER at knot positions (destination-out)
         ctx.save();
         ctx.globalCompositeOperation = "destination-out";
-        ctx.strokeStyle = "#000";  // irrelevant in destination-out
+        ctx.strokeStyle = "#000"; // irrelevant
         ctx.globalAlpha = 1;
         ctx.lineWidth = CUT_W;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
 
-        // Cut positions: near the vertical drops where the weave reads strongest.
-        // We place several “knot centers” in rotated-tile coords.
-        // (These are tuned for the lane geometry above.)
-        var knots = [
-          { x: TILE * 0.35, y: TILE * 0.52, dir: "v" },
-          { x: TILE * 0.70, y: TILE * 0.86, dir: "v" },
-          { x: TILE * 0.52, y: TILE * 0.18, dir: "h" },
-          { x: TILE * 0.18, y: TILE * 0.70, dir: "h" }
-        ];
-
         for (var i = 0; i < knots.length; i++) {
           var p = knots[i];
           ctx.beginPath();
           if (p.dir === "v") {
-            // erase along vertical direction
             ctx.moveTo(p.x, p.y - CUT_LEN * 0.5);
             ctx.lineTo(p.x, p.y + CUT_LEN * 0.5);
           } else {
-            // erase along horizontal direction
             ctx.moveTo(p.x - CUT_LEN * 0.5, p.y);
             ctx.lineTo(p.x + CUT_LEN * 0.5, p.y);
           }
@@ -202,9 +150,44 @@
         }
 
         ctx.restore();
+      }
 
-        // 3) OVER draw
-        drawFamily(overIsA ? "A" : "B");
+      // Draw one tile: rotate -> weave (under cut) -> rotate back
+      function drawTileWeave(tx, ty, tileX, tileY) {
+        ctx.save();
+        ctx.translate(tx + TILE * 0.5, ty + TILE * 0.5);
+        ctx.rotate(ANG);
+        ctx.translate(-TILE * 0.5, -TILE * 0.5);
+
+        // Checkerboard: alternate which family is OVER
+        var overIsA = ((tileX + tileY) % 2 === 0);
+
+        // Families are phase-shifted versions of the same ribbon.
+        // This gives the “interlock” rhythm.
+        var phaseA = 0.00;
+        var phaseB = -0.34;
+
+        // UNDER first
+        drawFamily(overIsA ? phaseB : phaseA);
+
+        // Cut gaps in UNDER near knots
+        cutUnderAtKnots();
+
+        // OVER last
+        drawFamily(overIsA ? phaseA : phaseB);
+
+        // Optional uprights (thin vertical lines) in rotated coords
+        if (UPRIGHT) {
+          ctx.beginPath();
+          ctx.moveTo(TILE * UPRIGHT_X[0], -TILE);
+          ctx.lineTo(TILE * UPRIGHT_X[0], TILE * 2);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(TILE * UPRIGHT_X[1], -TILE);
+          ctx.lineTo(TILE * UPRIGHT_X[1], TILE * 2);
+          ctx.stroke();
+        }
 
         ctx.restore();
       }
@@ -214,7 +197,7 @@
         var h = window.innerHeight;
         ctx.clearRect(0, 0, w, h);
 
-        // REQUIRED: pure white, opaque
+        // REQUIRED: pure white & opaque
         ctx.strokeStyle = "#fff";
         ctx.globalAlpha = 1;
         ctx.lineWidth = LINE;
@@ -222,37 +205,32 @@
         ctx.lineJoin = "round";
         ctx.shadowBlur = 0;
 
+        // Tiling with stagger (wallpaper flow)
         var startX = -TILE * 2;
         var startY = -TILE * 2;
         var endX = w + TILE * 2;
         var endY = h + TILE * 2;
 
-        var tileY = 0;
+        var row = 0;
         for (var y = startY; y < endY; y += TILE) {
-          var tileX = 0;
-          // stagger every row (helps continuity)
-          var xOffset = (tileY % 2) * (TILE * 0.5);
+          var xOffset = (row % 2) * (TILE * 0.5);
+          var col = 0;
           for (var x = startX; x < endX; x += TILE) {
-            drawTileWeave(x + xOffset, y, tileX, tileY);
-            tileX++;
+            drawTileWeave(x + xOffset, y, col, row);
+            col++;
           }
-          tileY++;
+          row++;
         }
 
         ctx.globalAlpha = 1;
       }
 
-      // Draw once + resize only
       resizeCanvas();
       var rto = 0;
-      window.addEventListener(
-        "resize",
-        function () {
-          clearTimeout(rto);
-          rto = setTimeout(resizeCanvas, 120);
-        },
-        { passive: true }
-      );
+      window.addEventListener("resize", function () {
+        clearTimeout(rto);
+        rto = setTimeout(resizeCanvas, 120);
+      }, { passive: true });
     }
 
     if (document.readyState === "loading") {
