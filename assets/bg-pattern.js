@@ -1,96 +1,132 @@
 // assets/bg-pattern.js
-// Pattern canvas: glow(z0) < pattern(z1) < content(z2)
-// Lines are drawn with strokeStyle = "#fff" (opacity via globalAlpha)
+// Canvas pattern layer: glow(z=0) -> pattern(z=1) -> content(z=2)
+// Requirements:
+// - Lines are drawn as pure white (#fff) and fully opaque (no alpha).
+// - Canvas never participates in layout (fixed + display:block + pointer-events:none).
+// - Layering is enforced via z-index.
 
 (function () {
   try {
     function run() {
       if (!document.body) return void setTimeout(run, 0);
 
-      // Create/reuse canvas
+      // 1) Ensure canvas exists
       var canvas = document.getElementById("bg-pattern-canvas");
       if (!canvas) {
         canvas = document.createElement("canvas");
         canvas.id = "bg-pattern-canvas";
         canvas.setAttribute("aria-hidden", "true");
-
-        // Put it near the top; z-index will control the actual stacking
         document.body.insertBefore(canvas, document.body.firstChild);
       }
 
-      // Force fixed-layer styles INLINE (prevents layout participation)
+      // 2) Force canvas layer styles INLINE (prevents layout break + guarantees z=1)
       var st = canvas.style;
       st.position = "fixed";
-      st.left = "0";
-      st.top = "0";
-      st.right = "0";
-      st.bottom = "0";
+      st.inset = "0";
       st.width = "100vw";
       st.height = "100vh";
       st.pointerEvents = "none";
       st.zIndex = "1";
-      st.display = "block";
+      st.opacity = "1";          // IMPORTANT: fully visible layer
+      st.display = "block";      // IMPORTANT: never inline
+      st.mixBlendMode = "normal"; // deterministic. Change to "overlay" later if desired.
 
+      // 3) Force content layers to z=2 inline (optional but guarantees your required order)
+      //    If you prefer CSS-only, you can remove this section, but this makes the stack bulletproof.
+      try {
+        var contentSelectors = [".site-header", ".page-content", ".site-footer"];
+        for (var i = 0; i < contentSelectors.length; i++) {
+          var el = document.querySelector(contentSelectors[i]);
+          if (el) {
+            el.style.position = el.style.position || "relative";
+            el.style.zIndex = "2";
+          }
+        }
+      } catch (_) {}
+
+      // 4) Setup 2D context
       var ctx = canvas.getContext("2d", { alpha: true });
 
+      // HiDPI resize
       function resize() {
         var dpr = Math.max(1, window.devicePixelRatio || 1);
         var w = Math.ceil(window.innerWidth);
         var h = Math.ceil(window.innerHeight);
+
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
+      resize();
 
-      // ===== tuning =====
-      var tile = 240;
-      var lineW = 1.15;
+      // ===== Pattern tuning =====
+      // Increase density by lowering tile. Increase visibility by raising lineWidth.
+      var tile = 240;         // 200〜320
+      var lineWidth = 2.0;    // 1.2〜2.4
+      var inset = 24;         // tile内の余白
+      var rails = 4;          // 平行線の本数
+      var railGap = 8;        // 平行線の間隔
 
-      // REQUIRED: line color is pure #fff
-      var lineColor = "#fff";
-      // opacity handled here (still #fff)
-      var lineAlpha = 0.28;
-
-      var speed = 0.0045;
+      // Drift (optional subtle movement)
+      var speed = 0.004;
       var drift = 14;
-      var inset = 26;
 
-      // small mouse parallax (optional)
+      // optional parallax
       var mx = 0, my = 0;
-      window.addEventListener("mousemove", function (e) {
-        mx = (e.clientX / window.innerWidth - 0.5) * 2;
-        my = (e.clientY / window.innerHeight - 0.5) * 2;
-      }, { passive: true });
+      window.addEventListener(
+        "mousemove",
+        function (e) {
+          mx = (e.clientX / window.innerWidth - 0.5) * 2;
+          my = (e.clientY / window.innerHeight - 0.5) * 2;
+        },
+        { passive: true }
+      );
+
+      function drawRibbon(x0, y0, offsetY) {
+        var x1 = x0 + inset;
+        var x2 = x0 + tile - inset;
+
+        // Curvy band line (single “ribbon”)
+        ctx.beginPath();
+        ctx.moveTo(x1, y0 + tile * 0.30 + offsetY);
+        ctx.quadraticCurveTo(
+          x0 + tile * 0.35,
+          y0 + tile * 0.05 + offsetY,
+          x0 + tile * 0.55,
+          y0 + tile * 0.22 + offsetY
+        );
+        ctx.quadraticCurveTo(
+          x0 + tile * 0.72,
+          y0 + tile * 0.36 + offsetY,
+          x0 + tile * 0.70,
+          y0 + tile * 0.50 + offsetY
+        );
+        ctx.quadraticCurveTo(
+          x0 + tile * 0.67,
+          y0 + tile * 0.66 + offsetY,
+          x0 + tile * 0.84,
+          y0 + tile * 0.78 + offsetY
+        );
+        ctx.quadraticCurveTo(
+          x0 + tile * 0.98,
+          y0 + tile * 0.88 + offsetY,
+          x2,
+          y0 + tile * 0.65 + offsetY
+        );
+        ctx.stroke();
+      }
 
       function drawTile(x0, y0) {
-        var x1 = x0 + inset;
-        var y1 = y0 + inset;
-        var x2 = x0 + tile - inset;
-        var y2 = y0 + tile - inset;
-
-        // main “ribbon-ish” path
-        ctx.beginPath();
-        ctx.moveTo(x1, y0 + tile * 0.30);
-        ctx.quadraticCurveTo(x0 + tile * 0.35, y0 + tile * 0.05, x0 + tile * 0.55, y0 + tile * 0.22);
-        ctx.quadraticCurveTo(x0 + tile * 0.72, y0 + tile * 0.36, x0 + tile * 0.70, y0 + tile * 0.50);
-        ctx.quadraticCurveTo(x0 + tile * 0.67, y0 + tile * 0.66, x0 + tile * 0.84, y0 + tile * 0.78);
-        ctx.quadraticCurveTo(x0 + tile * 0.98, y0 + tile * 0.88, x2, y0 + tile * 0.65);
-        ctx.stroke();
-
-        // parallel rails
-        var offsets = [8, -8, 18, -18];
-        for (var i = 0; i < offsets.length; i++) {
-          var o = offsets[i];
-          ctx.beginPath();
-          ctx.moveTo(x1, y0 + tile * 0.30 + o);
-          ctx.quadraticCurveTo(x0 + tile * 0.35, y0 + tile * 0.05 + o, x0 + tile * 0.55, y0 + tile * 0.22 + o);
-          ctx.quadraticCurveTo(x0 + tile * 0.72, y0 + tile * 0.36 + o, x0 + tile * 0.70, y0 + tile * 0.50 + o);
-          ctx.quadraticCurveTo(x0 + tile * 0.67, y0 + tile * 0.66 + o, x0 + tile * 0.84, y0 + tile * 0.78 + o);
-          ctx.quadraticCurveTo(x0 + tile * 0.98, y0 + tile * 0.88 + o, x2, y0 + tile * 0.65 + o);
-          ctx.stroke();
+        // main ribbon rails
+        for (var i = 0; i < rails; i++) {
+          var o = (i - (rails - 1) / 2) * railGap;
+          drawRibbon(x0, y0, o);
         }
 
-        // divider lines
+        // divider verticals (geometric rhythm)
+        var y1 = y0 + inset;
+        var y2 = y0 + tile - inset;
+
         ctx.beginPath();
         ctx.moveTo(x0 + tile * 0.20, y1);
         ctx.lineTo(x0 + tile * 0.20, y2);
@@ -114,17 +150,20 @@
         var h = window.innerHeight;
         ctx.clearRect(0, 0, w, h);
 
-        // REQUIRED: pure white
-        ctx.strokeStyle = lineColor;   // "#fff"
-        ctx.globalAlpha = lineAlpha;   // opacity
-        ctx.lineWidth = lineW;
+        // REQUIRED: pure white, fully opaque
+        ctx.strokeStyle = "#fff";  // <-- requirement
+        ctx.globalAlpha = 1;       // <-- requirement (no transparency)
+        ctx.lineWidth = lineWidth;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        ctx.shadowBlur = 0;        // keep “pure lines”
 
+        // slow drift so it feels alive (you can set drift=0 for static)
         var s = t * speed;
         var ox = Math.sin(s) * drift + mx * 6;
         var oy = Math.cos(s * 0.9) * drift + my * 6;
 
+        // cover screen with tiles (margin avoids gaps during drift)
         var startX = -tile * 2;
         var startY = -tile * 2;
         var endX = w + tile * 2;
@@ -135,21 +174,19 @@
             drawTile(x + ox, y + oy);
           }
         }
-
-        // restore for safety
-        ctx.globalAlpha = 1;
       }
 
-      // resize
+      // Resize handling
       var rto = 0;
-      window.addEventListener("resize", function () {
-        clearTimeout(rto);
-        rto = setTimeout(function () {
-          resize();
-        }, 80);
-      }, { passive: true });
+      window.addEventListener(
+        "resize",
+        function () {
+          clearTimeout(rto);
+          rto = setTimeout(resize, 80);
+        },
+        { passive: true }
+      );
 
-      resize();
       requestAnimationFrame(render);
     }
 
