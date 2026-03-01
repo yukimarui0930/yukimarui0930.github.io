@@ -280,9 +280,8 @@ pre{
   pointer-events: none;
   z-index: 1;
 
-  /* 白線を“紙っぽく”馴染ませる。不要なら消してOK */
-  mix-blend-mode: soft-light;
-  opacity: .22;
+  opacity: 1;              /* ← これ */
+  mix-blend-mode: normal;  /* ← これ（まず normal） */
 }
 
 .site-header,
