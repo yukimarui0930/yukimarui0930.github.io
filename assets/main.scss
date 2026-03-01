@@ -291,3 +291,20 @@ pre{
   position: relative;
   z-index: 2;
 }
+
+
+/* ===== Pattern canvas layer (MUST) ===== */
+#bg-pattern-canvas{
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+
+  /* layer: glow(0) < pattern(1) < content(2) */
+  z-index: 1;
+
+  /* 見え方（必要に応じて調整） */
+  opacity: .22;
+  mix-blend-mode: normal; /* まずは normal 推奨。馴染ませたいなら soft-light */
+}
