@@ -61,8 +61,9 @@ hr{ border: 0; height: 0; }
    Header
    ======================================= */
 .site-header{
-  background: rgba(252,252,251,.85);
-  backdrop-filter: blur(6px);
+  background: transparent !important;
+  backdrop-filter: none !important; /* 透明でも“すりガラス”が残るのを防ぐ */
+  -webkit-backdrop-filter: none !important;
   padding-top: 48px;
 }
 
