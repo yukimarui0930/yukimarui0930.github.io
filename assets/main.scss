@@ -279,3 +279,18 @@ html, body{
   background: var(--bg);
   z-index:-1;
 }
+
+/* bg-glow レイヤー：見える & コンテンツの背面 */
+body{ background: transparent; } /* htmlの背景色はそのまま使う */
+
+#bg-glow{
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.site-header, .page-content, .site-footer{
+  position: relative;
+  z-index: 1;
+}
