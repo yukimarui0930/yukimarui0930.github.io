@@ -4,6 +4,14 @@
 @import "minima";
 /* ===== フォント設計 ===== */
 
+.inter-<uniquifier> {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: <weight>;
+  font-style: normal;
+}
+
+
 /* 基本はInter */
 body{
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
