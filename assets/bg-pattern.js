@@ -1,34 +1,35 @@
 // assets/bg-pattern.js
-// SAFE version: force fixed-layer styles inline so it never breaks layout.
+// Pattern canvas: glow(z0) < pattern(z1) < content(z2)
+// Lines are drawn with strokeStyle = "#fff" (opacity via globalAlpha)
 
 (function () {
   try {
     function run() {
       if (!document.body) return void setTimeout(run, 0);
 
-      // Create or reuse
+      // Create/reuse canvas
       var canvas = document.getElementById("bg-pattern-canvas");
       if (!canvas) {
         canvas = document.createElement("canvas");
         canvas.id = "bg-pattern-canvas";
         canvas.setAttribute("aria-hidden", "true");
+
+        // Put it near the top; z-index will control the actual stacking
         document.body.insertBefore(canvas, document.body.firstChild);
       }
 
-      // IMPORTANT: force layer styles INLINE (prevents layout break even if CSS not applied)
-      var s = canvas.style;
-      s.position = "fixed";
-      s.left = "0";
-      s.top = "0";
-      s.right = "0";
-      s.bottom = "0";
-      s.width = "100vw";
-      s.height = "100vh";
-      s.pointerEvents = "none";
-      s.zIndex = "1";
-      s.opacity = "0.22";
-      s.mixBlendMode = "soft-light"; // 合わなければ "normal" に
-      s.display = "block";           // インライン化で崩れる事故を防ぐ
+      // Force fixed-layer styles INLINE (prevents layout participation)
+      var st = canvas.style;
+      st.position = "fixed";
+      st.left = "0";
+      st.top = "0";
+      st.right = "0";
+      st.bottom = "0";
+      st.width = "100vw";
+      st.height = "100vh";
+      st.pointerEvents = "none";
+      st.zIndex = "1";
+      st.display = "block";
 
       var ctx = canvas.getContext("2d", { alpha: true });
 
@@ -36,83 +37,73 @@
         var dpr = Math.max(1, window.devicePixelRatio || 1);
         var w = Math.ceil(window.innerWidth);
         var h = Math.ceil(window.innerHeight);
-
         canvas.width = Math.floor(w * dpr);
         canvas.height = Math.floor(h * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
 
-      // ===== TUNING =====
+      // ===== tuning =====
       var tile = 240;
-      var lineW = 1.1;
-      var alpha = 0.30;
-      var cornerR = 40;
-      var railGap = 8;
-      var rails = 4;
+      var lineW = 1.15;
 
-      var speed = 0.004;
+      // REQUIRED: line color is pure #fff
+      var lineColor = "#fff";
+      // opacity handled here (still #fff)
+      var lineAlpha = 0.28;
+
+      var speed = 0.0045;
       var drift = 14;
+      var inset = 26;
 
-      // tiny mouse parallax
+      // small mouse parallax (optional)
       var mx = 0, my = 0;
       window.addEventListener("mousemove", function (e) {
         mx = (e.clientX / window.innerWidth - 0.5) * 2;
         my = (e.clientY / window.innerHeight - 0.5) * 2;
       }, { passive: true });
 
-      function normalOffset(o) {
-        var k = 0.70; // 45deg-ish
-        return { dx: -o * k, dy: o * k };
-      }
-
-      function strokeRibbon(cx, cy, dx, dy) {
-        var p0x = cx - tile * 0.58, p0y = cy - tile * 0.05;
-        var p1x = cx - tile * 0.10, p1y = cy + tile * 0.42;
-        var p2x = cx + tile * 0.12, p2y = cy + tile * 0.64;
-        var p3x = cx + tile * 0.58, p3y = cy + tile * 0.18;
-
-        ctx.beginPath();
-        ctx.moveTo(p0x + dx, p0y + dy);
-        ctx.lineTo(p1x + dx, p1y + dy);
-        ctx.arcTo(p2x + dx, p2y + dy, p3x + dx, p3y + dy, cornerR);
-        ctx.lineTo(p3x + dx, p3y + dy);
-        ctx.stroke();
-      }
-
-      function strokeRibbon2(cx, cy, dx, dy) {
-        var p0x = cx - tile * 0.58, p0y = cy + tile * 0.58;
-        var p1x = cx - tile * 0.18, p1y = cy + tile * 0.20;
-        var p2x = cx + tile * 0.18, p2y = cy - tile * 0.18;
-        var p3x = cx + tile * 0.58, p3y = cy + tile * 0.18;
-
-        ctx.beginPath();
-        ctx.moveTo(p0x + dx, p0y + dy);
-        ctx.lineTo(p1x + dx, p1y + dy);
-        ctx.arcTo(p2x + dx, p2y + dy, p3x + dx, p3y + dy, cornerR);
-        ctx.lineTo(p3x + dx, p3y + dy);
-        ctx.stroke();
-      }
-
       function drawTile(x0, y0) {
-        var cx = x0 + tile * 0.5;
-        var cy = y0 + tile * 0.5;
+        var x1 = x0 + inset;
+        var y1 = y0 + inset;
+        var x2 = x0 + tile - inset;
+        var y2 = y0 + tile - inset;
 
-        for (var i = 0; i < rails; i++) {
-          var o = (i - (rails - 1) / 2) * railGap;
-          var n = normalOffset(o);
-          strokeRibbon(cx, cy, n.dx, n.dy);
-          strokeRibbon2(cx, cy, n.dx, n.dy);
+        // main “ribbon-ish” path
+        ctx.beginPath();
+        ctx.moveTo(x1, y0 + tile * 0.30);
+        ctx.quadraticCurveTo(x0 + tile * 0.35, y0 + tile * 0.05, x0 + tile * 0.55, y0 + tile * 0.22);
+        ctx.quadraticCurveTo(x0 + tile * 0.72, y0 + tile * 0.36, x0 + tile * 0.70, y0 + tile * 0.50);
+        ctx.quadraticCurveTo(x0 + tile * 0.67, y0 + tile * 0.66, x0 + tile * 0.84, y0 + tile * 0.78);
+        ctx.quadraticCurveTo(x0 + tile * 0.98, y0 + tile * 0.88, x2, y0 + tile * 0.65);
+        ctx.stroke();
+
+        // parallel rails
+        var offsets = [8, -8, 18, -18];
+        for (var i = 0; i < offsets.length; i++) {
+          var o = offsets[i];
+          ctx.beginPath();
+          ctx.moveTo(x1, y0 + tile * 0.30 + o);
+          ctx.quadraticCurveTo(x0 + tile * 0.35, y0 + tile * 0.05 + o, x0 + tile * 0.55, y0 + tile * 0.22 + o);
+          ctx.quadraticCurveTo(x0 + tile * 0.72, y0 + tile * 0.36 + o, x0 + tile * 0.70, y0 + tile * 0.50 + o);
+          ctx.quadraticCurveTo(x0 + tile * 0.67, y0 + tile * 0.66 + o, x0 + tile * 0.84, y0 + tile * 0.78 + o);
+          ctx.quadraticCurveTo(x0 + tile * 0.98, y0 + tile * 0.88 + o, x2, y0 + tile * 0.65 + o);
+          ctx.stroke();
         }
 
-        // subtle uprights
+        // divider lines
         ctx.beginPath();
-        ctx.moveTo(cx - tile * 0.18, cy - tile * 0.05);
-        ctx.lineTo(cx - tile * 0.18, cy + tile * 0.70);
+        ctx.moveTo(x0 + tile * 0.20, y1);
+        ctx.lineTo(x0 + tile * 0.20, y2);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(cx + tile * 0.18, cy - tile * 0.05);
-        ctx.lineTo(cx + tile * 0.18, cy + tile * 0.70);
+        ctx.moveTo(x0 + tile * 0.50, y1);
+        ctx.lineTo(x0 + tile * 0.50, y2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x0 + tile * 0.80, y1);
+        ctx.lineTo(x0 + tile * 0.80, y2);
         ctx.stroke();
       }
 
@@ -123,8 +114,10 @@
         var h = window.innerHeight;
         ctx.clearRect(0, 0, w, h);
 
+        // REQUIRED: pure white
+        ctx.strokeStyle = lineColor;   // "#fff"
+        ctx.globalAlpha = lineAlpha;   // opacity
         ctx.lineWidth = lineW;
-        ctx.strokeStyle = "rgba(255,255,255," + alpha + ")";
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
 
@@ -142,13 +135,18 @@
             drawTile(x + ox, y + oy);
           }
         }
+
+        // restore for safety
+        ctx.globalAlpha = 1;
       }
 
       // resize
       var rto = 0;
       window.addEventListener("resize", function () {
         clearTimeout(rto);
-        rto = setTimeout(resize, 80);
+        rto = setTimeout(function () {
+          resize();
+        }, 80);
       }, { passive: true });
 
       resize();
