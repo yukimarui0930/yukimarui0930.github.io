@@ -3,18 +3,22 @@
 
 @import "minima";
 
-/* ========== Design tokens ========== */
+/* =======================================
+   Design tokens
+   ======================================= */
 :root{
   --bg: #fcfcfb;
   --text: #111;
   --muted: rgba(17,17,17,.55);
   --line: rgba(17,17,17,.10);
-  --accent: #111; /* リンクもモノクロ寄せ */
   --max: 820px;
 }
 
-/* 背景と文字のコントラスト */
+/* =======================================
+   Base
+   ======================================= */
 html { background: var(--bg); }
+
 body{
   font-family:
     "Inter",
@@ -26,28 +30,34 @@ body{
 
   color: var(--text);
   background: var(--bg);
-  line-height: 1.9;
+
   font-size: 16px;
   font-weight: 100;
+  line-height: 1.9;
+
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* レイアウト：間延びを防ぐ */
+/* レイアウト：間延び防止 */
 .wrapper{
   max-width: var(--max);
   padding: 0 24px;
 }
 
-/* ========== Header ========== */
+/* 罫線（ボーダー）をなくす */
+.site-header{ border: 0 !important; }
+.site-footer{ border: 0 !important; }
+hr{ border: 0; height: 0; }
+
+/* =======================================
+   Header
+   ======================================= */
 .site-header{
-  border-top: 0;
-  border-bottom: 1px solid var(--line);
   background: rgba(252,252,251,.85);
   backdrop-filter: blur(6px);
 }
 
-/* サイトタイトル（英字を“上質”に） */
 .site-title{
   font-family: inherit;
   font-weight: 200 !important;
@@ -55,7 +65,6 @@ body{
   font-size: 20px;
 }
 
-/* ナビ */
 .site-nav .page-link{
   color: var(--muted);
   font-weight: 200;
@@ -65,19 +74,37 @@ body{
   text-decoration: none;
 }
 
-/* ========== Content typography ========== */
+/* =======================================
+   Spacing (Top)
+   ======================================= */
 .page-content{
-  padding: 52px 0; /* 余白を締める */
+  padding-top: 90px;     /* 上の余白：ここが主調整 */
+  padding-bottom: 60px;
 }
 
-/* 記事タイトル */
+.home{ margin-top: 12px; }
+
+.post-header{
+  margin-top: 40px;
+  margin-bottom: 28px;
+}
+
+@media screen and (max-width: 600px){
+  .page-content{ padding-top: 64px; }
+  .home{ margin-top: 6px; }
+}
+
+/* =======================================
+   Typography
+   ======================================= */
+p{ margin-bottom: 18px; }
+
 .post-title, .page-heading, h1{
   letter-spacing: -0.03em;
   line-height: 1.18;
   font-weight: 300;
 }
 
-/* タイトルサイズをレスポンシブに（でかすぎ問題を防ぐ） */
 .post-title{
   font-size: clamp(28px, 4vw, 44px);
   margin-top: 12px;
@@ -86,25 +113,12 @@ body{
   font-size: clamp(22px, 3vw, 34px);
 }
 
-/* メタ情報（日期など） */
 .post-meta{
   color: var(--muted);
   font-weight: 200;
 }
 
-/* 段落のリズム */
-p{
-  margin-bottom: 18px;
-}
-
-
-
-/* 罫線（ボーダー）を消す/薄くする */
-.site-header{ border-bottom: 0 !important; }
-.site-footer{ border-top: 0 !important; }
-hr{ border: 0; height: 0; }
-
-/* リンク下の“横線”をやめる */
+/* リンク：横罫線に見えないようにする */
 a{
   color: var(--text);
   text-decoration: none;
@@ -116,27 +130,31 @@ a:hover{
   text-underline-offset: 4px;
 }
 
-/* トップの投稿リストを整える */
-.post-list{ margin-left: 0; padding-left: 0; }
+/* =======================================
+   Home post list
+   ======================================= */
+.post-list{
+  margin-left: 0;
+  padding-left: 0;
+}
+
 .post-item{
   list-style: none;
   padding: 18px 0;
-  border-bottom: 0; /* 仕切り線も不要なら0 */
+  border-bottom: 0;
 }
+
 .post-title-line{ margin: 6px 0 0; }
+
 .post-link{
-  display: inline; /* blockをやめると“横線感”が出ない */
+  display: inline;
   font-size: 18px;
   font-weight: 300;
 }
-.post-meta{
-  color: var(--muted);
-  font-weight: 200;
-}
 
-
-
-/* 引用をスタイリッシュに */
+/* =======================================
+   Blockquote / Code
+   ======================================= */
 blockquote{
   color: var(--muted);
   border-left: 2px solid var(--line);
@@ -145,55 +163,24 @@ blockquote{
   letter-spacing: 0;
 }
 
-/* コードは静かに */
 pre, code{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+               "Liberation Mono", "Courier New", monospace;
 }
 pre{
   border: 1px solid var(--line);
   background: rgba(17,17,17,.03);
 }
 
-/* ========== Footer ========== */
+/* =======================================
+   Footer
+   ======================================= */
 .site-footer{
-  border-top: 1px solid var(--line);
   padding: 28px 0;
   color: var(--muted);
 }
+
 .footer-heading{
   font-weight: 200;
   color: var(--text);
-}
-
-
-
-
-
-
-
-/* =========================
-   Top spacing tuning
-   ========================= */
-
-/* ヘッダー直下〜本文開始の余白（全ページ共通） */
-.page-content{
-  padding-top: 90px;   /* ← ここを増減 */
-  padding-bottom: 60px;
-}
-
-/* トップ（home）の最初のブロックを少し下げる */
-.home{
-  margin-top: 12px;    /* ← ここを増減 */
-}
-
-/* 記事ページ：タイトル周りの余白を増やす */
-.post-header{
-  margin-top: 40px;     /* ← ここを増減 */
-  margin-bottom: 28px;
-}
-
-/* スマホは少し控えめに */
-@media screen and (max-width: 600px){
-  .page-content{ padding-top: 64px; }
-  .home{ margin-top: 6px; }
 }
