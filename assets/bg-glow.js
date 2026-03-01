@@ -1,11 +1,18 @@
 // assets/bg-glow.js
+// Mouse-follow + organic drift chromeyellow glow
+// - Always inserts #bg-glow
+// - If prefers-reduced-motion is ON, it still animates, but gently (animating-reduced)
+
 (function () {
   try {
     document.documentElement.setAttribute("data-bg-glow", "loaded");
 
     function reduceMotionEnabled() {
       try {
-        return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+        return !!(
+          window.matchMedia &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        );
       } catch (e) {
         return false;
       }
@@ -14,8 +21,12 @@
     function run() {
       document.documentElement.setAttribute("data-bg-glow", "run");
 
-      if (!document.body) { setTimeout(run, 0); return; }
+      if (!document.body) {
+        setTimeout(run, 0);
+        return;
+      }
 
+      // Insert layer (once)
       var el = document.getElementById("bg-glow");
       if (!el) {
         el = document.createElement("div");
@@ -24,40 +35,67 @@
         document.body.insertBefore(el, document.body.firstChild);
       }
 
-      // まず静的に見える初期値
+      document.documentElement.setAttribute("data-bg-glow", "inserted");
+
+      // Always set initial variables (so static render is OK even before first RAF)
       var root = document.documentElement.style;
-      root.setProperty("--bgx1", "55%"); root.setProperty("--bgy1", "18%");
-      root.setProperty("--bgx2", "70%"); root.setProperty("--bgy2", "28%");
-      root.setProperty("--bgx3", "42%"); root.setProperty("--bgy3", "30%");
+      root.setProperty("--bgx1", "55%");
+      root.setProperty("--bgy1", "18%");
+      root.setProperty("--bgx2", "70%");
+      root.setProperty("--bgy2", "28%");
+      root.setProperty("--bgx3", "42%");
+      root.setProperty("--bgy3", "30%");
 
-      if (reduceMotionEnabled()) {
-        document.documentElement.setAttribute("data-bg-glow", "static");
-        return;
+      var isReduced = reduceMotionEnabled();
+
+      // Target + state (0..1 normalized)
+      var tx = 0.55,
+        ty = 0.18;
+      var x = tx,
+        y = ty;
+      var vx = 0,
+        vy = 0;
+
+      // Tuning
+      // Normal: responsive + organic
+      var k = 0.10; // spring strength
+      var damp = 0.82; // damping (higher = smoother / slower)
+      var driftAmt = 0.03;
+
+      // Reduced motion: still animate but subtle
+      if (isReduced) {
+        k = 0.035;
+        damp = 0.92;
+        driftAmt = 0.012;
+        document.documentElement.setAttribute("data-bg-glow", "animating-reduced");
+      } else {
+        document.documentElement.setAttribute("data-bg-glow", "animating");
       }
-
-      // 追従＋有機ドリフト
-      var tx = 0.55, ty = 0.18;
-      var x = tx, y = ty;
-      var vx = 0, vy = 0;
-
-      var k = 0.10;     // 追従強度
-      var damp = 0.82;  // 減衰（大きいほどヌルい）
 
       function setTarget(cx, cy) {
         tx = Math.min(1, Math.max(0, cx / window.innerWidth));
         ty = Math.min(1, Math.max(0, cy / window.innerHeight));
       }
 
-      window.addEventListener("mousemove", function (e) {
-        setTarget(e.clientX, e.clientY);
-      }, { passive: true });
+      window.addEventListener(
+        "mousemove",
+        function (e) {
+          setTarget(e.clientX, e.clientY);
+        },
+        { passive: true }
+      );
 
-      window.addEventListener("touchmove", function (e) {
-        var t = e.touches && e.touches[0];
-        if (t) setTarget(t.clientX, t.clientY);
-      }, { passive: true });
+      window.addEventListener(
+        "touchmove",
+        function (e) {
+          var t = e.touches && e.touches[0];
+          if (t) setTarget(t.clientX, t.clientY);
+        },
+        { passive: true }
+      );
 
       function tick(now) {
+        // spring follow
         vx += (tx - x) * k;
         vy += (ty - y) * k;
         vx *= damp;
@@ -65,19 +103,23 @@
         x += vx;
         y += vy;
 
+        // organic drift (layered sines)
         var s = now * 0.001;
 
-        var driftX = (Math.sin(s * 0.8) + Math.sin(s * 1.7 + 1.2)) * 0.03;
-        var driftY = (Math.cos(s * 0.9) + Math.cos(s * 1.9 + 0.6)) * 0.03;
+        var driftX =
+          (Math.sin(s * 0.8) + Math.sin(s * 1.7 + 1.2)) * driftAmt;
+        var driftY =
+          (Math.cos(s * 0.9) + Math.cos(s * 1.9 + 0.6)) * driftAmt;
 
+        // 3 blob centers (phase-shifted)
         var x1 = x + driftX;
         var y1 = y + driftY;
 
-        var x2 = x + Math.sin(s * 1.3 + 2.0) * 0.10;
-        var y2 = y + Math.cos(s * 1.1 + 2.4) * 0.10;
+        var x2 = x + Math.sin(s * 1.3 + 2.0) * (isReduced ? 0.06 : 0.10);
+        var y2 = y + Math.cos(s * 1.1 + 2.4) * (isReduced ? 0.06 : 0.10);
 
-        var x3 = x + Math.sin(s * 0.7 + 0.4) * 0.16;
-        var y3 = y + Math.cos(s * 0.6 + 0.9) * 0.16;
+        var x3 = x + Math.sin(s * 0.7 + 0.4) * (isReduced ? 0.10 : 0.16);
+        var y3 = y + Math.cos(s * 0.6 + 0.9) * (isReduced ? 0.10 : 0.16);
 
         root.setProperty("--bgx1", (x1 * 100).toFixed(2) + "%");
         root.setProperty("--bgy1", (y1 * 100).toFixed(2) + "%");
@@ -89,7 +131,6 @@
         requestAnimationFrame(tick);
       }
 
-      document.documentElement.setAttribute("data-bg-glow", "animating");
       requestAnimationFrame(tick);
     }
 
