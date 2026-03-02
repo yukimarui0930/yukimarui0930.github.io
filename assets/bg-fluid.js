@@ -1,106 +1,113 @@
-// assets/bg-pattern.js
-(function () {
+/* assets/bg-fluid.js
+   背景最下層(z-index:0)で fluid-three を動かすためのローダー。
+   - fluid-three は実行時に <canvas> を document.body に prepend する
+   - その canvas に id="bg-fluid-canvas" を付与して、既存CSSに乗せる
+   - dat.GUI を出すので非表示にする（表示したいならCSS部分を消す）
+*/
 
-  const SVG_NS = "http://www.w3.org/2000/svg";
+(() => {
+  // 二重起動防止
+  if (window.__bgFluidThreeBooted) return;
+  window.__bgFluidThreeBooted = true;
 
-  function el(tag, attrs, parent) {
-    const e = document.createElementNS(SVG_NS, tag);
-    for (const k in attrs) e.setAttribute(k, attrs[k]);
-    if (parent) parent.appendChild(e);
-    return e;
+  // ユーザーが「視差/アニメーション低減」をONにしている場合は起動しない
+  const reduceMotion =
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  // dat.GUI を非表示（fluid-three はデフォルトでGUIを生成します）
+  const hideGuiStyle = document.createElement("style");
+  hideGuiStyle.textContent = `
+    .dg, .dg.ac { display: none !important; }
+  `;
+  document.head.appendChild(hideGuiStyle);
+
+  // bg-fluid.js の場所から相対で「ローカル配置」を優先して読みに行く
+  // 例: /assets/vendor/fluid-three/main.min.js
+  const currentScript = document.currentScript;
+  const localSrc = (() => {
+    try {
+      const base = (currentScript && currentScript.src) ? currentScript.src : location.href;
+      return new URL("./vendor/fluid-three/main.min.js", base).toString();
+    } catch {
+      return null;
+    }
+  })();
+
+  // ローカルが無い場合のフォールバック（CDN）
+  const cdnSrc = "https://cdn.jsdelivr.net/gh/mnmxmx/fluid-three@master/dist/main.min.js";
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve(src);
+      s.onerror = () => reject(new Error("Failed to load: " + src));
+      document.head.appendChild(s);
+    });
   }
 
-  function run() {
-    if (!document.body) return requestAnimationFrame(run);
+  function applyCanvasIdAndStyle() {
+    // fluid-three が生成する canvas を取得（通常は1枚）
+    const canvases = Array.from(document.body.querySelectorAll("canvas"));
+    if (!canvases.length) return false;
 
-    const old = document.getElementById("bg-pattern-svg");
-    if (old) old.remove();
+    // “それっぽい”フルスクリーンcanvasを優先（面積が最大のもの）
+    canvases.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    const canvas = canvases[0];
 
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    // id付与（既に別idなら上書きしない）
+    if (!canvas.id) canvas.id = "bg-fluid-canvas";
 
-    const svg = el("svg", {
-      id: "bg-pattern-svg",
-      viewBox: `0 0 ${w} ${h}`,
-      width: w,
-      height: h,
-      preserveAspectRatio: "none"
-    }, document.body);
+    // CSSが効くまでの保険（あなたの main.scss があればほぼ不要）
+    canvas.style.position = "fixed";
+    canvas.style.inset = "0";
+    canvas.style.width = "100vw";
+    canvas.style.height = "100vh";
+    canvas.style.zIndex = "0";
+    canvas.style.pointerEvents = "none";
 
-    svg.style.position = "fixed";
-    svg.style.inset = "0";
-    svg.style.zIndex = "1";
-    svg.style.pointerEvents = "none";
-
-    const defs = el("defs", {}, svg);
-
-    // ======================
-    // PATTERN
-    // ======================
-    const TILE_W = 480;
-    const TILE_H = 576;
-
-    const PATH_D = `M 0 392 L 1 401 L 15 417 L 18 425 L 18 545 L 16 549 L 15 569 L 12 575 L 17 575 L 21 553 L 22 484 L 20 476 L 20 433 L 22 429 L 24 429 L 57 468 L 57 575 L 61 575 L 61 477 L 65 478 L 71 484 L 97 516 L 97 575 L 101 575 L 101 528 L 103 525 L 111 532 L 127 554 L 132 565 L 134 575 L 139 575 L 137 565 L 130 550 L 115 529 L 106 519 L 105 521 L 103 516 L 102 517 L 99 514 L 100 511 L 91 503 L 92 501 L 88 498 L 85 492 L 78 484 L 76 486 L 73 480 L 68 477 L 67 472 L 56 462 L 55 458 L 42 445 L 32 432 L 31 428 L 25 425 L 24 421 Z`;
-
-    const pattern = el("pattern", {
-      id: "cutPattern",
-      patternUnits: "userSpaceOnUse",
-      width: TILE_W,
-      height: TILE_H
-    }, defs);
-
-    el("path", {
-      d: PATH_D,
-      fill: "#000"
-    }, pattern);
-
-    // ======================
-    // MASK
-    // ======================
-    const mask = el("mask", {
-      id: "bgMask",
-      maskUnits: "userSpaceOnUse",
-      x: 0,
-      y: 0,
-      width: w,
-      height: h
-    }, defs);
-
-    // white base
-    el("rect", {
-      x: 0,
-      y: 0,
-      width: w,
-      height: h,
-      fill: "#fff"
-    }, mask);
-
-    // black pattern (holes)
-    el("rect", {
-      x: 0,
-      y: 0,
-      width: w,
-      height: h,
-      fill: "url(#cutPattern)"
-    }, mask);
-
-    // ======================
-    // WHITE SHEET WITH MASK
-    // ======================
-    el("rect", {
-      x: 0,
-      y: 0,
-      width: w,
-      height: h,
-      fill: "#fff",
-      mask: "url(#bgMask)"
-    }, svg);
+    return true;
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run);
-  } else {
-    run();
+  async function boot() {
+    // head から読み込まれていて body がまだ無い場合に備える
+    if (!document.body) {
+      await new Promise((r) =>
+        window.addEventListener("DOMContentLoaded", r, { once: true })
+      );
+    }
+
+    // まずローカルを試し、無ければCDNへ
+    try {
+      if (localSrc) {
+        await loadScript(localSrc);
+      } else {
+        await loadScript(cdnSrc);
+      }
+    } catch (e1) {
+      console.warn("[bg-fluid] local load failed, fallback to CDN.", e1);
+      try {
+        await loadScript(cdnSrc);
+      } catch (e2) {
+        console.error("[bg-fluid] failed to load fluid-three bundle.", e2);
+        return;
+      }
+    }
+
+    // 読み込み直後に canvas がいるはずだが、念のため監視
+    if (applyCanvasIdAndStyle()) return;
+
+    const obs = new MutationObserver(() => {
+      if (applyCanvasIdAndStyle()) obs.disconnect();
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    // いつまでも監視しない
+    setTimeout(() => obs.disconnect(), 5000);
   }
 
+  boot();
 })();
