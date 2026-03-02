@@ -1,7 +1,7 @@
 // assets/bg-fluid.js
 // Layer: fluid(z0) < pattern(z1) < content(z2)
 // Safari-safe: RGBA8/UNSIGNED_BYTE only. If WebGL fails -> 2D fallback.
-// Also drives optional mask vars --bgx1..3/--bgy1..3 (harmless even if unused).
+// Reduced-motionでも「最低1回は描画」して見えるようにする。
 (function () {
   "use strict";
 
@@ -24,8 +24,8 @@
     Object.assign(c.style, {
       position: "fixed",
       inset: "0",
-      width: "100%",
-      height: "100%",
+      width: "100vw",
+      height: "100vh",
       zIndex: "0", // fluid layer
       pointerEvents: "none",
       display: "block",
@@ -38,8 +38,12 @@
 
   function resizeCanvas(canvas, dprCap = 2) {
     const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
-    const w = Math.max(2, Math.floor(canvas.clientWidth * dpr));
-    const h = Math.max(2, Math.floor(canvas.clientHeight * dpr));
+    // clientWidth/Height が0になる環境対策（念のため fallback）
+    const cssW = canvas.clientWidth || window.innerWidth || 2;
+    const cssH = canvas.clientHeight || window.innerHeight || 2;
+
+    const w = Math.max(2, Math.floor(cssW * dpr));
+    const h = Math.max(2, Math.floor(cssH * dpr));
     const changed = canvas.width !== w || canvas.height !== h;
     if (changed) {
       canvas.width = w;
@@ -54,7 +58,6 @@
     const cx = px01 * 100;
     const cy = (1 - py01) * 100;
 
-    // small drift (kept in-bounds)
     const o1x = Math.sin(tSec * 0.8) * 6.0;
     const o1y = Math.cos(tSec * 0.9) * 4.5;
     const o2x = Math.sin(tSec * 1.1 + 1.7) * 8.0;
@@ -114,14 +117,40 @@
       vx = 0,
       vy = 0;
 
+    function renderOnce() {
+      resizeCanvas(canvas, 2);
+
+      const w = canvas.width,
+        h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const mx = fx * w,
+        my = fy * h;
+      const R0 = Math.min(w, h) * 0.33; // 少し強め
+      const R1 = R0 * 0.85;
+      const R2 = R0 * 0.70;
+
+      function radial(cx, cy, r, a0, a1) {
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0.0, `rgba(253,208,0,${a0})`);
+        g.addColorStop(0.6, `rgba(253,208,0,${a1})`);
+        g.addColorStop(1.0, `rgba(253,208,0,0)`);
+        return g;
+      }
+
+      ctx.fillStyle = radial(mx, my, R0, 0.55, 0.30);
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = radial(mx + R0 * 0.20, my - R0 * 0.12, R1, 0.40, 0.20);
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = radial(mx - R0 * 0.18, my + R0 * 0.10, R2, 0.30, 0.16);
+      ctx.fillRect(0, 0, w, h);
+    }
+
     function tick(now) {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
       t += dt;
 
-      resizeCanvas(canvas, 2);
-
-      // autopilot if no pointer move yet
       const tx = pointer.hasEverMoved ? pointer.x : 0.52 + Math.sin(t * 0.15) * 0.06;
       const ty = pointer.hasEverMoved ? pointer.y : 0.48 + Math.cos(t * 0.13) * 0.06;
 
@@ -134,43 +163,15 @@
 
       setMaskVars(fx, fy, t);
 
-      const w = canvas.width,
-        h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
+      renderOnce();
 
-      const mx = fx * w,
-        my = fy * h;
-      const R0 = Math.min(w, h) * 0.30;
-      const R1 = R0 * 0.85;
-      const R2 = R0 * 0.70;
-
-      const b1x = mx + Math.sin(t * 0.8) * R0 * 0.25;
-      const b1y = my + Math.cos(t * 0.9) * R0 * 0.22;
-      const b2x = mx + Math.sin(t * 1.1 + 1.7) * R0 * 0.35;
-      const b2y = my + Math.cos(t * 1.0 + 2.2) * R0 * 0.28;
-      const b3x = mx - Math.sin(t * 1.1 + 1.7) * R0 * 0.25;
-      const b3y = my - Math.cos(t * 1.0 + 2.2) * R0 * 0.20;
-
-      function radial(cx, cy, r, a0, a1) {
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        g.addColorStop(0.0, `rgba(253,208,0,${a0})`); // #FDD000
-        g.addColorStop(0.6, `rgba(253,208,0,${a1})`);
-        g.addColorStop(1.0, `rgba(253,208,0,0)`);
-        return g;
-      }
-
-      // Strong enough to see through pattern "holes"
-      ctx.fillStyle = radial(b1x, b1y, R0, 0.45, 0.22);
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = radial(b2x, b2y, R1, 0.32, 0.16);
-      ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = radial(b3x, b3y, R2, 0.24, 0.12);
-      ctx.fillRect(0, 0, w, h);
-
-      requestAnimationFrame(tick);
+      if (!REDUCE) requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(tick);
+    // reduce-motion でも「最低1回は描く」
+    setMaskVars(fx, fy, performance.now() * 0.001);
+    renderOnce();
+    if (!REDUCE) requestAnimationFrame(tick);
   }
 
   // -------------------------
@@ -186,6 +187,10 @@
       preserveDrawingBuffer: false,
     });
     if (!gl) return false;
+
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
     function compile(type, src) {
       const s = gl.createShader(type);
@@ -302,7 +307,8 @@
         float a = exp(-d / uRadius);
 
         if (uMode == 0) {
-          o = vec4(base.rgb + a * uColor, 1.0);
+          // “穴”越しに見せるので濃いめに入れる
+          o = vec4(base.rgb + a * uColor * 1.35, 1.0);
         } else {
           vec2 vel = base.xy + a * uForce;
           o = vec4(vel, 0.0, 1.0);
@@ -318,14 +324,18 @@
         vec3 d = texture(uDye, vUv).rgb;
         d = 1.0 - exp(-d * 1.25);
 
+        float t = clamp((d.r + d.g + d.b) / 3.0, 0.0, 1.0);
+
         vec3 base = vec3(0.992, 0.816, 0.0); // #FDD000
         vec3 warm = vec3(1.0, 0.72, 0.05);
 
-        float t = clamp((d.r + d.g + d.b) / 3.0, 0.0, 1.0);
-        vec3 col = mix(base, warm, smoothstep(0.15, 0.95, t)) * t;
+        vec3 col = mix(base, warm, smoothstep(0.10, 0.95, t)) * t;
 
-        // strong alpha to ensure visibility (tune down later)
-        float alpha = clamp(t * 1.0, 0.0, 1.0);
+        // ★見えない問題対策：alpha を強化（薄いと白に溶ける）
+        float alpha = smoothstep(0.02, 0.18, t);
+        alpha = max(alpha, t * 1.35);
+        alpha = clamp(alpha, 0.0, 1.0);
+
         o = vec4(col, alpha);
       }`;
 
@@ -439,7 +449,6 @@
       if (!fboComplete(divFbo)) return false;
       divergence = { tex: divTex, fbo: divFbo };
 
-      // clear all
       const fbos = [
         velocity.read.fbo,
         velocity.write.fbo,
@@ -454,7 +463,6 @@
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
       }
-
       return true;
     }
 
@@ -470,26 +478,29 @@
       bindQuad(pSpl);
       setTex(pSpl, "uTarget", dye.read.tex, 0);
       gl.uniform2f(gl.getUniformLocation(pSpl, "uPoint"), x, y);
-      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0040 * radiusMul);
+      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0060 * radiusMul); // 少し大きめ
       gl.uniform3f(gl.getUniformLocation(pSpl, "uColor"), col[0], col[1], col[2]);
       gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), 0.0, 0.0);
       gl.uniform1i(gl.getUniformLocation(pSpl, "uMode"), 0);
       drawTo(dye.write.fbo);
       dye.swap();
 
-      // velocity
-      bindQuad(pSpl);
-      setTex(pSpl, "uTarget", velocity.read.tex, 0);
-      gl.uniform2f(gl.getUniformLocation(pSpl, "uPoint"), x, y);
-      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0050 * radiusMul);
-      gl.uniform3f(gl.getUniformLocation(pSpl, "uColor"), 0.0, 0.0, 0.0);
-      gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), fx * 450.0, fy * 450.0);
-      gl.uniform1i(gl.getUniformLocation(pSpl, "uMode"), 1);
-      drawTo(velocity.write.fbo);
-      velocity.swap();
+      // velocity（reduce-motion では打たない）
+      if (!REDUCE) {
+        bindQuad(pSpl);
+        setTex(pSpl, "uTarget", velocity.read.tex, 0);
+        gl.uniform2f(gl.getUniformLocation(pSpl, "uPoint"), x, y);
+        gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0070 * radiusMul);
+        gl.uniform3f(gl.getUniformLocation(pSpl, "uColor"), 0.0, 0.0, 0.0);
+        gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), fx * 450.0, fy * 450.0);
+        gl.uniform1i(gl.getUniformLocation(pSpl, "uMode"), 1);
+        drawTo(velocity.write.fbo);
+        velocity.swap();
+      }
     }
 
     let last = performance.now();
+    let didStatic = false;
 
     function frame(now) {
       const dt = Math.min(0.016, (now - last) / 1000);
@@ -501,7 +512,6 @@
 
       if (!initTargets()) return false;
 
-      // autopilot if no pointer yet
       if (!pointer.hasEverMoved) {
         pointer.x = 0.52 + Math.sin(t * 0.15) * 0.06;
         pointer.y = 0.48 + Math.cos(t * 0.13) * 0.06;
@@ -509,18 +519,23 @@
 
       setMaskVars(pointer.x, pointer.y, t);
 
+      const texelX = 1 / simW;
+      const texelY = 1 / simH;
+
+      // ★REDUCE でも最低1回は splat して表示する（ここが “反映されない” 本丸）
+      if (REDUCE && !didStatic) {
+        splat(pointer.x, 1 - pointer.y, 0.0, 0.0, 1.15);
+        didStatic = true;
+      }
+
       if (!REDUCE) {
-        const texelX = 1 / simW;
-        const texelY = 1 / simH;
+        // 常に少量注入（透明化しない）
+        splat(pointer.x, 1 - pointer.y, 0.0, 0.0, 0.90);
 
-        // ALWAYS inject some dye so it never goes fully transparent
-        splat(pointer.x, 1 - pointer.y, 0.0, 0.0, 0.85);
-
-        // extra injection on movement
         if (pointer.moved) {
           const fx = pointer.vx / Math.max(1e-4, dt);
           const fy = pointer.vy / Math.max(1e-4, dt);
-          splat(pointer.x, 1 - pointer.y, fx, -fy, 1.0);
+          splat(pointer.x, 1 - pointer.y, fx, -fy, 1.05);
         }
         pointer.moved = false;
         pointer.vx = 0;
@@ -588,6 +603,9 @@
       setTex(pDis, "uDye", dye.read.tex, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
+      // reduce-motion は1回描いて止める（“動かない”けど見える）
+      if (REDUCE) return true;
+
       requestAnimationFrame(frame);
       return true;
     }
@@ -600,10 +618,8 @@
     const canvas = ensureCanvas();
     attachPointer(canvas);
 
-    // set initial vars
     setMaskVars(pointer.x, pointer.y, performance.now() * 0.001);
 
-    // Prefer WebGL2, fallback to 2D if anything fails
     const ok = runWebGL2(canvas);
     if (!ok) run2D(canvas);
   }
