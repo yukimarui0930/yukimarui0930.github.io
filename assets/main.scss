@@ -248,3 +248,21 @@ pre{
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+
+/* どんな canvas でも “背景候補” は最背面へ（保険） */
+body > canvas{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* GUI を種類問わず殺す（保険） */
+.dg, .dg.ac, .lil-gui, .lil-gui.root, #gui{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
