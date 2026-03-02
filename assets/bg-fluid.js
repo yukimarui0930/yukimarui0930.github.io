@@ -39,26 +39,32 @@
   }
 
   // Update CSS vars for bg-pattern mask (top-left origin, percent strings)
-  function setMaskVars(px01, py01, tSec) {
-    const root = document.documentElement;
+function setMaskVars(px01, py01, tSec) {
+  const root = document.documentElement;
 
-    const cx = px01 * 100;
-    const cy = (1 - py01) * 100;
+  const cx = px01 * 100;
+  const cy = (1 - py01) * 100;
 
-    // orbital drift (percent offsets)
-    const o1x = Math.sin(tSec * 0.8) * 10.0;
-    const o1y = Math.cos(tSec * 0.9) * 7.0;
+  const o1x = Math.sin(tSec * 0.8) * 10.0;
+  const o1y = Math.cos(tSec * 0.9) * 7.0;
 
-    const o2x = Math.sin(tSec * 1.1 + 1.7) * 14.0;
-    const o2y = Math.cos(tSec * 1.0 + 2.2) * 10.0;
+  const o2x = Math.sin(tSec * 1.1 + 1.7) * 14.0;
+  const o2y = Math.cos(tSec * 1.0 + 2.2) * 10.0;
 
-    root.style.setProperty("--bgx1", (cx + o1x).toFixed(2) + "%");
-    root.style.setProperty("--bgy1", (cy + o1y).toFixed(2) + "%");
-    root.style.setProperty("--bgx2", (cx + o2x).toFixed(2) + "%");
-    root.style.setProperty("--bgy2", (cy + o2y).toFixed(2) + "%");
-    root.style.setProperty("--bgx3", (cx - o2x * 0.7).toFixed(2) + "%");
-    root.style.setProperty("--bgy3", (cy - o2y * 0.7).toFixed(2) + "%");
-  }
+  // clamp 0..100 so mask doesn't run off-screen
+  const clampPct = (v) => Math.max(0, Math.min(100, v));
+
+  const x1 = clampPct(cx + o1x), y1 = clampPct(cy + o1y);
+  const x2 = clampPct(cx + o2x), y2 = clampPct(cy + o2y);
+  const x3 = clampPct(cx - o2x * 0.7), y3 = clampPct(cy - o2y * 0.7);
+
+  root.style.setProperty("--bgx1", x1.toFixed(2) + "%");
+  root.style.setProperty("--bgy1", y1.toFixed(2) + "%");
+  root.style.setProperty("--bgx2", x2.toFixed(2) + "%");
+  root.style.setProperty("--bgy2", y2.toFixed(2) + "%");
+  root.style.setProperty("--bgx3", x3.toFixed(2) + "%");
+  root.style.setProperty("--bgy3", y3.toFixed(2) + "%");
+}
 
   function resizeCanvas(canvas, dprCap, scale) {
     const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1)) * scale;
