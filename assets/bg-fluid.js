@@ -1,7 +1,6 @@
 // assets/bg-pattern.js
-// White sheet with transparent cut lines (stable version)
-
 (function () {
+
   const SVG_NS = "http://www.w3.org/2000/svg";
 
   function el(tag, attrs, parent) {
@@ -14,7 +13,6 @@
   function run() {
     if (!document.body) return requestAnimationFrame(run);
 
-    // remove old
     const old = document.getElementById("bg-pattern-svg");
     if (old) old.remove();
 
@@ -29,7 +27,6 @@
       preserveAspectRatio: "none"
     }, document.body);
 
-    // style via CSS (NOT attribute units)
     svg.style.position = "fixed";
     svg.style.inset = "0";
     svg.style.zIndex = "1";
@@ -37,25 +34,9 @@
 
     const defs = el("defs", {}, svg);
 
-    const mask = el("mask", {
-      id: "bgMask",
-      maskUnits: "userSpaceOnUse",
-      x: 0,
-      y: 0,
-      width: w,
-      height: h
-    }, defs);
-
-    // white base (opaque)
-    el("rect", {
-      x: 0,
-      y: 0,
-      width: w,
-      height: h,
-      fill: "#fff"
-    }, mask);
-
-    // === pattern ===
+    // ======================
+    // PATTERN
+    // ======================
     const TILE_W = 480;
     const TILE_H = 576;
 
@@ -73,7 +54,28 @@
       fill: "#000"
     }, pattern);
 
-    // fill whole mask with repeating pattern
+    // ======================
+    // MASK
+    // ======================
+    const mask = el("mask", {
+      id: "bgMask",
+      maskUnits: "userSpaceOnUse",
+      x: 0,
+      y: 0,
+      width: w,
+      height: h
+    }, defs);
+
+    // white base
+    el("rect", {
+      x: 0,
+      y: 0,
+      width: w,
+      height: h,
+      fill: "#fff"
+    }, mask);
+
+    // black pattern (holes)
     el("rect", {
       x: 0,
       y: 0,
@@ -82,7 +84,9 @@
       fill: "url(#cutPattern)"
     }, mask);
 
-    // final white sheet using mask
+    // ======================
+    // WHITE SHEET WITH MASK
+    // ======================
     el("rect", {
       x: 0,
       y: 0,
@@ -98,4 +102,5 @@
   } else {
     run();
   }
+
 })();
