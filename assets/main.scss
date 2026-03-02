@@ -313,3 +313,13 @@ pre{
   mix-blend-mode: normal; /* まずは normal 推奨。馴染ませたいなら soft-light */
 }
 
+
+
+:root{
+  --bg-pattern-color: #fff;
+  --bg-pattern-opacity: 1;
+
+  /* 0.25〜0.70くらいで調整。上げるほどギザギザは消えるが太く見えやすい */
+  --bg-pattern-smooth-stroke: 0.70;
+}
+
