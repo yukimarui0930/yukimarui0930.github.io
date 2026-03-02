@@ -4,7 +4,7 @@
 @import "minima";
 
 /* =======================================
-   Design tokens + bg-glow positions
+   Design tokens + mask control points
    ======================================= */
 :root{
   --bg: #fff !important;
@@ -13,16 +13,25 @@
   --line: rgba(17,17,17,.10);
   --max: 820px;
 
-  /* bg-glow: 初期位置（JSが更新） */
+  /* bg-pattern mask centers (bg-fluid.js が更新) */
   --bgx1: 55%; --bgy1: 18%;
   --bgx2: 70%; --bgy2: 28%;
   --bgx3: 42%; --bgy3: 30%;
+
+  /* bg-pattern.js 用 */
+  --bg-pattern-color: #fff;
+  --bg-pattern-opacity: 1;
+
+  /* 0.25〜0.70くらいで調整。上げるほどギザギザは消えるが太く見えやすい */
+  --bg-pattern-smooth-stroke: 0.70;
 }
 
 /* =======================================
    Base
    ======================================= */
-html { background: var(--bg); }
+html{
+  background: var(--bg);
+}
 
 body{
   font-family:
@@ -35,7 +44,7 @@ body{
 
   color: var(--text);
 
-  /* 重要：bodyを透明にして bg-glow を見せる */
+  /* 背景レイヤー(canvas/SVG)を見せるため */
   background: transparent;
 
   font-size: 16px;
@@ -62,9 +71,21 @@ hr{ border: 0; height: 0; }
    ======================================= */
 .site-header{
   background: transparent !important;
-  backdrop-filter: none !important; /* 透明でも“すりガラス”が残るのを防ぐ */
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+
+  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+
   padding-top: 48px;
+}
+
+.site-header *{
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
 
 .site-title{
@@ -84,7 +105,7 @@ hr{ border: 0; height: 0; }
 }
 
 /* =======================================
-   Spacing (Top)
+   Spacing
    ======================================= */
 .page-content{
   padding-top: 90px;
@@ -196,77 +217,21 @@ pre{
 }
 
 /* =======================================
-   Mouse-follow chromeyellow glow (background)
-   - 半径200px外は完全に色ゼロ
-   - blur禁止（漏れの原因）
+   Background layers (final)
+   fluid(z0) < pattern(z1) < content(z2)
    ======================================= */
 
-/* glowはコンテンツの背面、html背景の前面 */
-#bg-glow{
+/* fluid layer (bg-fluid.js が生成) */
+#bg-fluid-canvas{
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
   pointer-events: none;
-  z-index: 0;
+  z-index: 0 !important;
 }
 
-/* ブロブ本体 */
-#bg-glow::before{
-  content: "";
-  position: absolute;
-  inset: -10%;
-
-  background:
-    radial-gradient(circle 200px at var(--bgx1) var(--bgy1),
-      rgba(255,183,0,.22) 0px,
-      rgba(255,183,0,.10) 120px,
-      rgba(255,183,0,0)   200px),
-    radial-gradient(circle 200px at var(--bgx2) var(--bgy2),
-      rgba(255,166,0,.16) 0px,
-      rgba(255,166,0,.07) 120px,
-      rgba(255,166,0,0)   200px),
-    radial-gradient(circle 200px at var(--bgx3) var(--bgy3),
-      rgba(255,204,0,.12) 0px,
-      rgba(255,204,0,.05) 120px,
-      rgba(255,204,0,0)   200px);
-
-  filter: none !important; /* 200px外へ色が漏れるので禁止 */
-  opacity: 1;
-  transform: translate3d(0,0,0);
-}
-
-/* スマホでも blur を足さない（漏れ防止） */
-@media (max-width: 600px){
-  #bg-glow::before{
-    filter: none !important;
-    opacity: 1 !important;
-  }
-}
-
-/* Reduce motion は「消す」ではなく「薄く」 */
-@media (prefers-reduced-motion: reduce){
-  #bg-glow::before{ opacity: .35; }
-}
-
-/* ===== Force header fully transparent (kill any inner backgrounds) ===== */
-.site-header,
-.site-header *{
-  background: transparent !important;
-  background-color: transparent !important;
-  background-image: none !important;
-  box-shadow: none !important;
-}
-.site-header{
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* =======================================
-   Layers
-   glow(z0) < pattern(z1) < content(z2)
-   - pattern は「3つの円(半径200px)」の合成マスクで切る
-   - マウスオーバーしてない所は完全に白に同化して“見えない”
-   ======================================= */
-
+/* pattern layer (bg-pattern.js が生成) */
 #bg-pattern-svg,
 #bg-pattern-canvas{
   position: fixed;
@@ -274,14 +239,14 @@ pre{
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 1;
+  z-index: 1 !important;
 
-  /* 常に薄く見えてしまう原因を潰す */
+  /* “常に薄く見える”原因を潰す */
   opacity: 1 !important;
   mix-blend-mode: normal;
   filter: none !important;
 
-  /* 3 blob union mask */
+  /* 3 blob union mask（中心は --bgx* / --bgy*） */
   -webkit-mask-image:
     radial-gradient(circle 200px at var(--bgx1) var(--bgy1), #000 0px, #000 180px, transparent 200px),
     radial-gradient(circle 200px at var(--bgx2) var(--bgy2), #000 0px, #000 180px, transparent 200px),
@@ -297,40 +262,7 @@ pre{
   mask-size: 100% 100%, 100% 100%, 100% 100%;
 }
 
-/* コンテンツは pattern より前 */
-.site-header,
-.page-content,
-.site-footer{
-  position: relative;
-  z-index: 2;
-}
-
-/* bg-pattern.js 用の変数（svg側で利用） */
-:root{
-  --bg-pattern-color: #fff;
-  --bg-pattern-opacity: 1;
-
-  /* 0.25〜0.70くらいで調整。上げるほどギザギザは消えるが太く見えやすい */
-  --bg-pattern-smooth-stroke: 0.70;
-}
-/* =======================================
-   Layers (final)
-   fluid(z0) < pattern(z1) < content(z2)
-   ======================================= */
-#bg-fluid-canvas{
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 0 !important;
-}
-
-#bg-pattern-svg,
-#bg-pattern-canvas{
-  z-index: 1 !important;
-}
-
+/* content layer */
 .site-header,
 .page-content,
 .site-footer{
