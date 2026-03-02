@@ -220,20 +220,24 @@ pre{
   content: "";
   position: absolute;
   inset: -10%;
+
+  // 50px外は完全に色ゼロ（＝下地の白だけ）になるように px でハードに切る
   background:
-    radial-gradient(800px 600px at var(--bgx1) var(--bgy1),
-      rgba(255, 183, 0, .22) 0%,
-      rgba(255, 183, 0, .10) 35%,
-      rgba(255, 183, 0, 0) 70%),
-    radial-gradient(700px 520px at var(--bgx2) var(--bgy2),
-      rgba(255, 166, 0, .16) 0%,
-      rgba(255, 166, 0, .08) 38%,
-      rgba(255, 166, 0, 0) 72%),
-    radial-gradient(900px 700px at var(--bgx3) var(--bgy3),
-      rgba(255, 204, 0, .12) 0%,
-      rgba(255, 204, 0, .06) 40%,
-      rgba(255, 204, 0, 0) 75%);
-  filter: blur(12px) saturate(115%);
+    radial-gradient(circle 50px at var(--bgx1) var(--bgy1),
+      rgba(255, 183, 0, .26) 0px,
+      rgba(255, 183, 0, .12) 28px,
+      rgba(255, 183, 0, 0)   50px),
+    radial-gradient(circle 50px at var(--bgx2) var(--bgy2),
+      rgba(255, 166, 0, .18) 0px,
+      rgba(255, 166, 0, .08) 28px,
+      rgba(255, 166, 0, 0)   50px),
+    radial-gradient(circle 50px at var(--bgx3) var(--bgy3),
+      rgba(255, 204, 0, .14) 0px,
+      rgba(255, 204, 0, .06) 28px,
+      rgba(255, 204, 0, 0)   50px);
+
+  // blurがあると「50px外」に色が漏れるので禁止
+  filter: saturate(115%);
   opacity: 1;
   transform: translate3d(0,0,0);
 }
