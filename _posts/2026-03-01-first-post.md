@@ -5,8 +5,10 @@ date: 2026-03-01 19:00:00 +0900
 categories: diary
 ---
 
-**Auguries of Innocence**
+**Auguries of Innocence**<br>
 BY WILLIAM BLAKE<br>
+
+
 To see a world in a grain of sand<br>
 And a heaven in a wild flower,<br>
 Hold infinity in the palm of your hand<br>
