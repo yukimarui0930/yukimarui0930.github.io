@@ -13,19 +13,6 @@
   --line: rgba(17,17,17,.10);
   --max: 820px;
 
-  /* bg-pattern mask centers (bg-fluid.js が更新) */
-  --bgx1: 55%; --bgy1: 18%;
-  --bgx2: 70%; --bgy2: 28%;
-  --bgx3: 42%; --bgy3: 30%;
-
-  /* bg-pattern.js 用 */
-  --bg-pattern-color: #fff;
-  --bg-pattern-opacity: 1;
-
-  /* 0.25〜0.70くらいで調整。上げるほどギザギザは消えるが太く見えやすい */
-  --bg-pattern-smooth-stroke: 0.70;
-}
-
 /* =======================================
    Base
    ======================================= */
@@ -231,29 +218,6 @@ pre{
   z-index: 0 !important;
 }
 
-/* pattern layer (bg-pattern.js が生成) */
-/* pattern layer (bg-pattern.js が生成) */
-#bg-pattern-svg,
-#bg-pattern-canvas{
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 1 !important;
-
-  /* “常に薄く見える”原因を潰す */
-  mix-blend-mode: normal;
-  filter: none !important;
-
-  /* ✅ CSSマスクは使わない（SVGマスクだけで穴を作る） */
-  -webkit-mask-image: none !important;
-  mask-image: none !important;
-  -webkit-mask-repeat: initial !important;
-  mask-repeat: initial !important;
-  -webkit-mask-size: initial !important;
-  mask-size: initial !important;
-}
 
 /* content layer */
 .site-header,
