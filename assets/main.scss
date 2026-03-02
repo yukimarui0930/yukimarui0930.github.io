@@ -232,6 +232,7 @@ pre{
 }
 
 /* pattern layer (bg-pattern.js が生成) */
+/* pattern layer (bg-pattern.js が生成) */
 #bg-pattern-svg,
 #bg-pattern-canvas{
   position: fixed;
@@ -246,20 +247,13 @@ pre{
   mix-blend-mode: normal;
   filter: none !important;
 
-  /* 3 blob union mask（中心は --bgx* / --bgy*） */
-  -webkit-mask-image:
-    radial-gradient(circle 200px at var(--bgx1) var(--bgy1), #000 0px, #000 180px, transparent 200px),
-    radial-gradient(circle 200px at var(--bgx2) var(--bgy2), #000 0px, #000 180px, transparent 200px),
-    radial-gradient(circle 200px at var(--bgx3) var(--bgy3), #000 0px, #000 180px, transparent 200px);
-  -webkit-mask-repeat: no-repeat, no-repeat, no-repeat;
-  -webkit-mask-size: 100% 100%, 100% 100%, 100% 100%;
-
-  mask-image:
-    radial-gradient(circle 200px at var(--bgx1) var(--bgy1), #000 0px, #000 180px, transparent 200px),
-    radial-gradient(circle 200px at var(--bgx2) var(--bgy2), #000 0px, #000 180px, transparent 200px),
-    radial-gradient(circle 200px at var(--bgx3) var(--bgy3), #000 0px, #000 180px, transparent 200px);
-  mask-repeat: no-repeat, no-repeat, no-repeat;
-  mask-size: 100% 100%, 100% 100%, 100% 100%;
+  /* ✅ CSSマスクは使わない（SVGマスクだけで穴を作る） */
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  -webkit-mask-repeat: initial !important;
+  mask-repeat: initial !important;
+  -webkit-mask-size: initial !important;
+  mask-size: initial !important;
 }
 
 /* content layer */
