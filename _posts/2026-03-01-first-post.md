@@ -14,10 +14,10 @@ And a heaven in a wild flower,<br>
 Hold infinity in the palm of your hand<br>
 And eternity in an hour.<br>
 
-一粒の砂に、世界を見て  
-一輪の花に、天国を見る  
-無限をその掌に受け止め、  
-一時のうちに永遠を感じる  
+一粒の砂のうちに、世界を  
+一輪の花のうちに、天国を  
+あなた掌のうちに、無限を  
+ただ一時のうちに、永遠を感じる  
  
  <br>
 
