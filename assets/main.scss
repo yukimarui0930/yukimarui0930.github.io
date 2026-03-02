@@ -271,3 +271,20 @@ body{ background: transparent; }
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+
+:root{
+  --fluid-opacity: 0.12;
+  --fluid-tint: rgba(0,153,51,0.22); /* 0.12〜0.35で調整 */
+}
+
+/* bg root がある前提（あなたの実装はある） */
+#bg-fluid-root::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: var(--fluid-tint);
+  mix-blend-mode: multiply;
+  pointer-events:none;
+  z-index: 2; /* canvasより上（root内） */
+}
