@@ -107,14 +107,19 @@
       // ============
       // Tuning (default = "もっと速い + 余韻ふわふわ")
       // ============
-      // Cursor response speed
-      var fastSmooth = 0.28; // ↑ fast (0.18..0.35)
-      // Afterglow length (smaller = longer tail)
-      var tailSmooth = 0.030; // ↓ more lingering (0.02..0.06)
+// Cursor response speed (吸い付く)
+var fastSmooth = 0.42;   // 0.28 → 0.42（ほぼ即追従）
 
-      // Spring body speed/feel
-      var k = 0.135; // ↑ faster body catch-up (0.09..0.18)
-      var damp = 0.955; // ↑ more lingering glide (0.93..0.975)
+// Afterglow length（余韻は tail で残す）
+var tailSmooth = 0.020;  // 0.030 → 0.020（尾を長く）
+
+// Spring body（キレを出す）
+var k = 0.22;            // 0.135 → 0.22（本体も追従を速く）
+var damp = 0.92;         // 0.955 → 0.92（収束を速く、ダルさを消す）
+
+// 余韻のふわふわ（必要なら少し増やす）
+var wobbleAmt = 0.055;   // 0.050 → 0.055（上げすぎ注意）
+var wobbleSmooth = 0.11; // 0.090 → 0.11（揺れを“滑らか”に）
 
       // Organic drift (low-frequency elegance)
       var driftAmt = 0.040;
