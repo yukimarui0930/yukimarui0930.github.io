@@ -1,8 +1,6 @@
 // assets/bg-fluid.js
-// Layer order (final): fluid(z0) < pattern(z1) < content(z2)
-// - Creates #bg-fluid-canvas as the bottom layer (z-index:0)
-// - Drives bg-pattern mask variables: --bgx1/--bgy1 ... --bgx3/--bgy3
-// - WebGL2 fluid simulation when available; 2D fallback otherwise
+// Layer: fluid(z0) < pattern(z1) < content(z2)
+// Safari-safe: RGBA8/UNSIGNED_BYTE only. If WebGL pipeline fails -> 2D fallback.
 (function () {
   "use strict";
 
@@ -10,7 +8,10 @@
   const REDUCE =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // ---------- DOM ----------
+  function clamp01(v) {
+    return v < 0 ? 0 : v > 1 ? 1 : v;
+  }
+
   function ensureCanvas() {
     let c = document.getElementById(ID);
     if (c) return c;
@@ -24,50 +25,17 @@
       inset: "0",
       width: "100%",
       height: "100%",
-      zIndex: "0", // IMPORTANT: fluid is z0
+      zIndex: "0",
       pointerEvents: "none",
       display: "block",
     });
 
-    // Put it as early as possible in body (behind other fixed layers)
     (document.body || document.documentElement).prepend(c);
     return c;
   }
 
-  function clamp01(v) {
-    return v < 0 ? 0 : v > 1 ? 1 : v;
-  }
-
-  // Update CSS vars for bg-pattern mask (top-left origin, percent strings)
-function setMaskVars(px01, py01, tSec) {
-  const root = document.documentElement;
-
-  const cx = px01 * 100;
-  const cy = (1 - py01) * 100;
-
-  const o1x = Math.sin(tSec * 0.8) * 10.0;
-  const o1y = Math.cos(tSec * 0.9) * 7.0;
-
-  const o2x = Math.sin(tSec * 1.1 + 1.7) * 14.0;
-  const o2y = Math.cos(tSec * 1.0 + 2.2) * 10.0;
-
-  // clamp 0..100 so mask doesn't run off-screen
-  const clampPct = (v) => Math.max(0, Math.min(100, v));
-
-  const x1 = clampPct(cx + o1x), y1 = clampPct(cy + o1y);
-  const x2 = clampPct(cx + o2x), y2 = clampPct(cy + o2y);
-  const x3 = clampPct(cx - o2x * 0.7), y3 = clampPct(cy - o2y * 0.7);
-
-  root.style.setProperty("--bgx1", x1.toFixed(2) + "%");
-  root.style.setProperty("--bgy1", y1.toFixed(2) + "%");
-  root.style.setProperty("--bgx2", x2.toFixed(2) + "%");
-  root.style.setProperty("--bgy2", y2.toFixed(2) + "%");
-  root.style.setProperty("--bgx3", x3.toFixed(2) + "%");
-  root.style.setProperty("--bgy3", y3.toFixed(2) + "%");
-}
-
-  function resizeCanvas(canvas, dprCap, scale) {
-    const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1)) * scale;
+  function resizeCanvas(canvas, dprCap = 2) {
+    const dpr = Math.max(1, Math.min(dprCap, window.devicePixelRatio || 1));
     const w = Math.max(2, Math.floor(canvas.clientWidth * dpr));
     const h = Math.max(2, Math.floor(canvas.clientHeight * dpr));
     const changed = canvas.width !== w || canvas.height !== h;
@@ -78,7 +46,28 @@ function setMaskVars(px01, py01, tSec) {
     return changed;
   }
 
-  // ---------- Pointer ----------
+  // Drive optional mask vars for pattern (you can keep or ignore)
+  function setMaskVars(px01, py01, tSec) {
+    const root = document.documentElement;
+    const cx = px01 * 100;
+    const cy = (1 - py01) * 100;
+
+    // smaller drift so it doesn't fly off-screen
+    const o1x = Math.sin(tSec * 0.8) * 6.0;
+    const o1y = Math.cos(tSec * 0.9) * 4.5;
+    const o2x = Math.sin(tSec * 1.1 + 1.7) * 8.0;
+    const o2y = Math.cos(tSec * 1.0 + 2.2) * 6.0;
+
+    const clampPct = (v) => Math.max(0, Math.min(100, v));
+
+    root.style.setProperty("--bgx1", clampPct(cx + o1x).toFixed(2) + "%");
+    root.style.setProperty("--bgy1", clampPct(cy + o1y).toFixed(2) + "%");
+    root.style.setProperty("--bgx2", clampPct(cx + o2x).toFixed(2) + "%");
+    root.style.setProperty("--bgy2", clampPct(cy + o2y).toFixed(2) + "%");
+    root.style.setProperty("--bgx3", clampPct(cx - o2x * 0.7).toFixed(2) + "%");
+    root.style.setProperty("--bgy3", clampPct(cy - o2y * 0.7).toFixed(2) + "%");
+  }
+
   const pointer = {
     x: 0.5,
     y: 0.5,
@@ -92,9 +81,9 @@ function setMaskVars(px01, py01, tSec) {
 
   function attachPointer(canvas) {
     function onMove(e) {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
+      const r = canvas.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
 
       pointer.px = pointer.x;
       pointer.py = pointer.y;
@@ -108,9 +97,9 @@ function setMaskVars(px01, py01, tSec) {
     window.addEventListener("pointermove", onMove, { passive: true });
   }
 
-  // =========================
+  // -------------------------
   // 2D fallback (always works)
-  // =========================
+  // -------------------------
   function run2D(canvas) {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
@@ -118,20 +107,19 @@ function setMaskVars(px01, py01, tSec) {
     let last = performance.now();
     let t = 0;
 
-    // inertial follower so it feels “fluid”
     let fx = pointer.x,
-      fy = pointer.y;
-    let vx = 0,
+      fy = pointer.y,
+      vx = 0,
       vy = 0;
 
-    function frame(now) {
+    function tick(now) {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
       t += dt;
 
-      resizeCanvas(canvas, 2, 1);
+      resizeCanvas(canvas, 2);
 
-      // follow pointer with inertia (even if no move, drift a bit)
+      // autopilot if no pointer
       const tx = pointer.hasEverMoved ? pointer.x : 0.52 + Math.sin(t * 0.15) * 0.06;
       const ty = pointer.hasEverMoved ? pointer.y : 0.48 + Math.cos(t * 0.13) * 0.06;
 
@@ -142,61 +130,50 @@ function setMaskVars(px01, py01, tSec) {
       fx = clamp01(fx + vx * dt);
       fy = clamp01(fy + vy * dt);
 
-      // Drive bg-pattern mask variables
       setMaskVars(fx, fy, t);
 
-      const w = canvas.width;
-      const h = canvas.height;
-
+      const w = canvas.width,
+        h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      // chromeyellow #FDD000
-      const mx = fx * w;
-      const my = fy * h;
-
-      // radii
-      const R0 = Math.min(w, h) * 0.26;
+      const mx = fx * w,
+        my = fy * h;
+      const R0 = Math.min(w, h) * 0.30;
       const R1 = R0 * 0.85;
       const R2 = R0 * 0.70;
 
-      // blob centers (match the 3-point mask drift)
       const b1x = mx + Math.sin(t * 0.8) * R0 * 0.25;
       const b1y = my + Math.cos(t * 0.9) * R0 * 0.22;
-
       const b2x = mx + Math.sin(t * 1.1 + 1.7) * R0 * 0.35;
       const b2y = my + Math.cos(t * 1.0 + 2.2) * R0 * 0.28;
-
       const b3x = mx - Math.sin(t * 1.1 + 1.7) * R0 * 0.25;
       const b3y = my - Math.cos(t * 1.0 + 2.2) * R0 * 0.20;
 
       function radial(cx, cy, r, a0, a1) {
         const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-        g.addColorStop(0.0, `rgba(253,208,0,${a0})`);
+        g.addColorStop(0.0, `rgba(253,208,0,${a0})`); // #FDD000
         g.addColorStop(0.6, `rgba(253,208,0,${a1})`);
         g.addColorStop(1.0, `rgba(253,208,0,0)`);
         return g;
       }
 
-      // keep subtle: pattern must remain the “main”
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = radial(b1x, b1y, R0, 0.22, 0.10);
+      // stronger than before so it's unmistakable under the pattern holes
+      ctx.fillStyle = radial(b1x, b1y, R0, 0.45, 0.22);
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = radial(b2x, b2y, R1, 0.32, 0.16);
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = radial(b3x, b3y, R2, 0.24, 0.12);
       ctx.fillRect(0, 0, w, h);
 
-      ctx.fillStyle = radial(b2x, b2y, R1, 0.16, 0.08);
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.fillStyle = radial(b3x, b3y, R2, 0.12, 0.06);
-      ctx.fillRect(0, 0, w, h);
-
-      requestAnimationFrame(frame);
+      requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(frame);
+    requestAnimationFrame(tick);
   }
 
-  // =========================
-  // WebGL2 fluid (stable-ish)
-  // =========================
+  // -------------------------
+  // WebGL2 RGBA8 fluid-lite
+  // -------------------------
   function runWebGL2(canvas) {
     const gl = canvas.getContext("webgl2", {
       alpha: true,
@@ -207,11 +184,6 @@ function setMaskVars(px01, py01, tSec) {
       preserveDrawingBuffer: false,
     });
     if (!gl) return false;
-
-    // If float color buffer unavailable, many shaders still run,
-    // but we'll keep it conservative.
-    const hasFloat = !!gl.getExtension("EXT_color_buffer_float");
-    const hasLinearFloat = !!gl.getExtension("OES_texture_float_linear");
 
     function compile(type, src) {
       const s = gl.createShader(type);
@@ -224,6 +196,7 @@ function setMaskVars(px01, py01, tSec) {
       }
       return s;
     }
+
     function link(vs, fs) {
       const p = gl.createProgram();
       gl.attachShader(p, vs);
@@ -341,16 +314,16 @@ function setMaskVars(px01, py01, tSec) {
       uniform sampler2D uDye;
       void main(){
         vec3 d = texture(uDye, vUv).rgb;
-        d = 1.0 - exp(-d * 1.35);
+        d = 1.0 - exp(-d * 1.25);
 
         vec3 base = vec3(0.992, 0.816, 0.0); // #FDD000
         vec3 warm = vec3(1.0, 0.72, 0.05);
-
         float t = clamp((d.r + d.g + d.b) / 3.0, 0.0, 1.0);
+
         vec3 col = mix(base, warm, smoothstep(0.15, 0.95, t)) * t;
 
-        // keep it behind the pattern; subtle
-        float alpha = clamp(t * 1, 0.0, 1);
+        // strong alpha so it's unmistakable; reduce later if needed
+        float alpha = clamp(t * 1.0, 0.0, 1.0);
         o = vec4(col, alpha);
       }`;
 
@@ -371,7 +344,7 @@ function setMaskVars(px01, py01, tSec) {
     const pDis = link(vs, fsDis);
     if (!pAdv || !pDiv || !pJac || !pGra || !pSpl || !pDis) return false;
 
-    // full-screen quad
+    // Quad
     const quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(
@@ -395,14 +368,15 @@ function setMaskVars(px01, py01, tSec) {
       gl.uniform1i(loc, unit);
     }
 
-    function createTex(w, h, internalFormat, format, type, linear) {
+    // RGBA8 only
+    function createTex(w, h, linear) {
       const t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, linear ? gl.LINEAR : gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, linear ? gl.LINEAR : gl.NEAREST);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, w, h, 0, format, type, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       return t;
     }
 
@@ -413,11 +387,18 @@ function setMaskVars(px01, py01, tSec) {
       return f;
     }
 
-    function createDoubleFBO(w, h, internalFormat, format, type, linear) {
-      const t1 = createTex(w, h, internalFormat, format, type, linear);
-      const t2 = createTex(w, h, internalFormat, format, type, linear);
+    function fboComplete(fbo) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      const s = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      return s === gl.FRAMEBUFFER_COMPLETE;
+    }
+
+    function createDoubleFBO(w, h, linear) {
+      const t1 = createTex(w, h, linear);
+      const t2 = createTex(w, h, linear);
       const f1 = createFBO(t1);
       const f2 = createFBO(t2);
+      if (!fboComplete(f1) || !fboComplete(f2)) return null;
       return {
         read: { tex: t1, fbo: f1 },
         write: { tex: t2, fbo: f2 },
@@ -429,55 +410,44 @@ function setMaskVars(px01, py01, tSec) {
       };
     }
 
-    // simulation params
-    const SIM_SCALE = 0.45; // lower => faster/blurrier
-    const PRESSURE_ITERS = 16;
+    const SIM_SCALE = 0.45;
+    const PRESSURE_ITERS = 14;
 
     let simW = 2,
       simH = 2;
-    let velocity, dye, pressure, divergence;
-
-    // texture formats (conservative)
-    const useFloat = hasFloat;
-    const internal = useFloat ? gl.RGBA16F : gl.RGBA8;
-    const type = useFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
-    const linear = useFloat ? hasLinearFloat : true;
+    let velocity = null,
+      dye = null,
+      pressure = null,
+      divergence = null;
 
     function initTargets() {
       const w = Math.max(64, Math.floor(canvas.width * SIM_SCALE));
       const h = Math.max(64, Math.floor(canvas.height * SIM_SCALE));
-      if (w === simW && h === simH && velocity && dye) return;
+      if (w === simW && h === simH && velocity && dye) return true;
 
       simW = w;
       simH = h;
 
-      velocity = createDoubleFBO(simW, simH, internal, gl.RGBA, type, linear);
-      dye = createDoubleFBO(simW, simH, internal, gl.RGBA, type, linear);
-      pressure = createDoubleFBO(simW, simH, internal, gl.RGBA, type, false);
+      velocity = createDoubleFBO(simW, simH, true);
+      dye = createDoubleFBO(simW, simH, true);
+      pressure = createDoubleFBO(simW, simH, false);
+      if (!velocity || !dye || !pressure) return false;
 
-      const divTex = createTex(simW, simH, internal, gl.RGBA, type, false);
+      const divTex = createTex(simW, simH, false);
       const divFbo = createFBO(divTex);
+      if (!fboComplete(divFbo)) return false;
       divergence = { tex: divTex, fbo: divFbo };
 
-      // clear
-      gl.bindFramebuffer(gl.FRAMEBUFFER, velocity.read.fbo);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, velocity.write.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      // clear all
+      [velocity.read.fbo, velocity.write.fbo, dye.read.fbo, dye.write.fbo, pressure.read.fbo, pressure.write.fbo, divergence.fbo].forEach(
+        (f) => {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+      );
 
-      gl.bindFramebuffer(gl.FRAMEBUFFER, dye.read.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, dye.write.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, pressure.read.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, pressure.write.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, divergence.fbo);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+      return true;
     }
 
     function drawTo(fbo) {
@@ -485,15 +455,14 @@ function setMaskVars(px01, py01, tSec) {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 
-    function splat(x, y, fx, fy) {
-      // dye color #FDD000 (normalized)
-      const col = [0.992, 0.816, 0.0];
+    function splat(x, y, fx, fy, radiusMul) {
+      const col = [0.992, 0.816, 0.0]; // #FDD000
 
       // dye
       bindQuad(pSpl);
       setTex(pSpl, "uTarget", dye.read.tex, 0);
       gl.uniform2f(gl.getUniformLocation(pSpl, "uPoint"), x, y);
-      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0028);
+      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0040 * radiusMul);
       gl.uniform3f(gl.getUniformLocation(pSpl, "uColor"), col[0], col[1], col[2]);
       gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), 0.0, 0.0);
       gl.uniform1i(gl.getUniformLocation(pSpl, "uMode"), 0);
@@ -504,9 +473,9 @@ function setMaskVars(px01, py01, tSec) {
       bindQuad(pSpl);
       setTex(pSpl, "uTarget", velocity.read.tex, 0);
       gl.uniform2f(gl.getUniformLocation(pSpl, "uPoint"), x, y);
-      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0035);
+      gl.uniform1f(gl.getUniformLocation(pSpl, "uRadius"), 0.0050 * radiusMul);
       gl.uniform3f(gl.getUniformLocation(pSpl, "uColor"), 0.0, 0.0, 0.0);
-      gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), fx * 650.0, fy * 650.0);
+      gl.uniform2f(gl.getUniformLocation(pSpl, "uForce"), fx * 450.0, fy * 450.0);
       gl.uniform1i(gl.getUniformLocation(pSpl, "uMode"), 1);
       drawTo(velocity.write.fbo);
       velocity.swap();
@@ -516,11 +485,14 @@ function setMaskVars(px01, py01, tSec) {
     function frame(now) {
       const dt = Math.min(0.016, (now - last) / 1000);
       last = now;
-
-      // keep updating mask vars even if reduced motion is on (but we won't animate fluid)
       const t = now * 0.001;
 
-      // if user never moved, gentle autopilot
+      resizeCanvas(canvas, 2);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      if (!initTargets()) return false;
+
+      // autopilot if no pointer
       if (!pointer.hasEverMoved) {
         pointer.x = 0.52 + Math.sin(t * 0.15) * 0.06;
         pointer.y = 0.48 + Math.cos(t * 0.13) * 0.06;
@@ -528,28 +500,18 @@ function setMaskVars(px01, py01, tSec) {
 
       setMaskVars(pointer.x, pointer.y, t);
 
-      const resized = resizeCanvas(canvas, 2, 1);
-      if (resized) gl.viewport(0, 0, canvas.width, canvas.height);
-      initTargets();
-
       if (!REDUCE) {
         const texelX = 1 / simW;
         const texelY = 1 / simH;
 
-        // splat when moved (or inject a tiny idle)
-        const speed = Math.hypot(pointer.vx, pointer.vy);
-        if (pointer.moved && speed > 0.00001) {
+        // ALWAYS inject a tiny amount so it never becomes fully transparent
+        splat(pointer.x, 1 - pointer.y, 0.0, 0.0, 0.85);
+
+        // plus extra on movement
+        if (pointer.moved) {
           const fx = pointer.vx / Math.max(1e-4, dt);
           const fy = pointer.vy / Math.max(1e-4, dt);
-          splat(pointer.x, 1 - pointer.y, fx, -fy); // NOTE: GL y is bottom-origin
-        } else if (!pointer.hasEverMoved) {
-          // tiny idle “breathing”
-          splat(
-            pointer.x,
-            1 - pointer.y,
-            Math.sin(t * 0.7) * 0.2,
-            Math.cos(t * 0.8) * 0.2
-          );
+          splat(pointer.x, 1 - pointer.y, fx, -fy, 1.0);
         }
         pointer.moved = false;
         pointer.vx = 0;
@@ -618,21 +580,21 @@ function setMaskVars(px01, py01, tSec) {
       gl.drawArrays(gl.TRIANGLES, 0, 6);
 
       requestAnimationFrame(frame);
+      return true;
     }
 
     requestAnimationFrame(frame);
     return true;
   }
 
-  // ---------- Boot ----------
   function boot() {
     const canvas = ensureCanvas();
     attachPointer(canvas);
 
-    // Initialize mask vars immediately (so pattern has sane defaults)
+    // set initial vars
     setMaskVars(pointer.x, pointer.y, performance.now() * 0.001);
 
-    // Prefer WebGL2; fallback to 2D
+    // Prefer WebGL2, but if it fails, fallback to 2D
     const ok = runWebGL2(canvas);
     if (!ok) run2D(canvas);
   }
