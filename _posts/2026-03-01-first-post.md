@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "初めての投稿"
+title: "無垢の予兆 Auguries of Innocence"
 date: 2026-03-01 19:00:00 +0900
 categories: diary
 ---
