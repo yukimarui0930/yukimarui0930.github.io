@@ -250,7 +250,7 @@ pre{
 }
 
 
-/* どんな canvas でも “背景候補” は最背面へ（保険） */
+/* --- hard guarantee: any canvas injected into body becomes background --- */
 body > canvas{
   position: fixed !important;
   inset: 0 !important;
@@ -258,9 +258,14 @@ body > canvas{
   height: 100vh !important;
   pointer-events: none !important;
   z-index: -1 !important;
+  display: block !important;
 }
 
-/* GUI を種類問わず殺す（保険） */
+/* 背景を見せるため、bodyは透明・htmlが白 */
+html{ background: #fff; }
+body{ background: transparent; }
+
+/* GUI kill (dat.GUI / lil-gui) */
 .dg, .dg.ac, .lil-gui, .lil-gui.root, #gui{
   display: none !important;
   visibility: hidden !important;
