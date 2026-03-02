@@ -7,7 +7,7 @@
    Design tokens + bg-glow positions
    ======================================= */
 :root{
-  --bg: #fff;
+  --bg: #fff !important;
   --text: #111;
   --muted: rgba(17,17,17,.55);
   --line: rgba(17,17,17,.10);
