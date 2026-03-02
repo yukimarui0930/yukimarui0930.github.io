@@ -313,9 +313,27 @@ pre{
   /* 0.25〜0.70くらいで調整。上げるほどギザギザは消えるが太く見えやすい */
   --bg-pattern-smooth-stroke: 0.70;
 }
+/* =======================================
+   Layers (final)
+   fluid(z0) < pattern(z1) < content(z2)
+   ======================================= */
+#bg-fluid-canvas{
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0 !important;
+}
 
+#bg-pattern-svg,
+#bg-pattern-canvas{
+  z-index: 1 !important;
+}
 
-#bg-fluid-canvas { z-index: -1 !important; }
-#bg-glow { z-index: 0 !important; }
-#bg-pattern-canvas { z-index: 1 !important; }
-#site, main, header { position: relative; z-index: 2; }
+.site-header,
+.page-content,
+.site-footer{
+  position: relative;
+  z-index: 2;
+}
