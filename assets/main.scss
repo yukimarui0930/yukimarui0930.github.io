@@ -233,8 +233,8 @@ pre{
       rgba(255, 204, 0, .12) 0%,
       rgba(255, 204, 0, .06) 40%,
       rgba(255, 204, 0, 0) 75%);
-  filter: blur(22px) saturate(115%);
-  opacity: .95;
+  filter: blur(12px) saturate(115%);
+  opacity: 1;
   transform: translate3d(0,0,0);
 }
 
