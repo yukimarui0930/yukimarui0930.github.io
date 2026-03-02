@@ -1,6 +1,7 @@
 // assets/bg-fluid.js
 // Layer: fluid(z0) < pattern(z1) < content(z2)
-// Safari-safe: RGBA8/UNSIGNED_BYTE only. If WebGL pipeline fails -> 2D fallback.
+// Safari-safe: RGBA8/UNSIGNED_BYTE only. If WebGL fails -> 2D fallback.
+// Also drives optional mask vars --bgx1..3/--bgy1..3 (harmless even if unused).
 (function () {
   "use strict";
 
@@ -25,9 +26,10 @@
       inset: "0",
       width: "100%",
       height: "100%",
-      zIndex: "0",
+      zIndex: "0", // fluid layer
       pointerEvents: "none",
       display: "block",
+      background: "transparent",
     });
 
     (document.body || document.documentElement).prepend(c);
@@ -46,13 +48,13 @@
     return changed;
   }
 
-  // Drive optional mask vars for pattern (you can keep or ignore)
+  // Optional: drive pattern mask vars (if CSS mask is enabled; harmless otherwise)
   function setMaskVars(px01, py01, tSec) {
     const root = document.documentElement;
     const cx = px01 * 100;
     const cy = (1 - py01) * 100;
 
-    // smaller drift so it doesn't fly off-screen
+    // small drift (kept in-bounds)
     const o1x = Math.sin(tSec * 0.8) * 6.0;
     const o1y = Math.cos(tSec * 0.9) * 4.5;
     const o2x = Math.sin(tSec * 1.1 + 1.7) * 8.0;
@@ -119,7 +121,7 @@
 
       resizeCanvas(canvas, 2);
 
-      // autopilot if no pointer
+      // autopilot if no pointer move yet
       const tx = pointer.hasEverMoved ? pointer.x : 0.52 + Math.sin(t * 0.15) * 0.06;
       const ty = pointer.hasEverMoved ? pointer.y : 0.48 + Math.cos(t * 0.13) * 0.06;
 
@@ -157,7 +159,7 @@
         return g;
       }
 
-      // stronger than before so it's unmistakable under the pattern holes
+      // Strong enough to see through pattern "holes"
       ctx.fillStyle = radial(b1x, b1y, R0, 0.45, 0.22);
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = radial(b2x, b2y, R1, 0.32, 0.16);
@@ -318,11 +320,11 @@
 
         vec3 base = vec3(0.992, 0.816, 0.0); // #FDD000
         vec3 warm = vec3(1.0, 0.72, 0.05);
-        float t = clamp((d.r + d.g + d.b) / 3.0, 0.0, 1.0);
 
+        float t = clamp((d.r + d.g + d.b) / 3.0, 0.0, 1.0);
         vec3 col = mix(base, warm, smoothstep(0.15, 0.95, t)) * t;
 
-        // strong alpha so it's unmistakable; reduce later if needed
+        // strong alpha to ensure visibility (tune down later)
         float alpha = clamp(t * 1.0, 0.0, 1.0);
         o = vec4(col, alpha);
       }`;
@@ -344,7 +346,7 @@
     const pDis = link(vs, fsDis);
     if (!pAdv || !pDiv || !pJac || !pGra || !pSpl || !pDis) return false;
 
-    // Quad
+    // Fullscreen quad
     const quad = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, quad);
     gl.bufferData(
@@ -368,7 +370,7 @@
       gl.uniform1i(loc, unit);
     }
 
-    // RGBA8 only
+    // RGBA8 only (Safari-safe)
     function createTex(w, h, linear) {
       const t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
@@ -389,8 +391,7 @@
 
     function fboComplete(fbo) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-      const s = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-      return s === gl.FRAMEBUFFER_COMPLETE;
+      return gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
     }
 
     function createDoubleFBO(w, h, linear) {
@@ -439,13 +440,20 @@
       divergence = { tex: divTex, fbo: divFbo };
 
       // clear all
-      [velocity.read.fbo, velocity.write.fbo, dye.read.fbo, dye.write.fbo, pressure.read.fbo, pressure.write.fbo, divergence.fbo].forEach(
-        (f) => {
-          gl.bindFramebuffer(gl.FRAMEBUFFER, f);
-          gl.clearColor(0, 0, 0, 0);
-          gl.clear(gl.COLOR_BUFFER_BIT);
-        }
-      );
+      const fbos = [
+        velocity.read.fbo,
+        velocity.write.fbo,
+        dye.read.fbo,
+        dye.write.fbo,
+        pressure.read.fbo,
+        pressure.write.fbo,
+        divergence.fbo,
+      ];
+      for (const f of fbos) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
 
       return true;
     }
@@ -482,6 +490,7 @@
     }
 
     let last = performance.now();
+
     function frame(now) {
       const dt = Math.min(0.016, (now - last) / 1000);
       last = now;
@@ -492,7 +501,7 @@
 
       if (!initTargets()) return false;
 
-      // autopilot if no pointer
+      // autopilot if no pointer yet
       if (!pointer.hasEverMoved) {
         pointer.x = 0.52 + Math.sin(t * 0.15) * 0.06;
         pointer.y = 0.48 + Math.cos(t * 0.13) * 0.06;
@@ -504,10 +513,10 @@
         const texelX = 1 / simW;
         const texelY = 1 / simH;
 
-        // ALWAYS inject a tiny amount so it never becomes fully transparent
+        // ALWAYS inject some dye so it never goes fully transparent
         splat(pointer.x, 1 - pointer.y, 0.0, 0.0, 0.85);
 
-        // plus extra on movement
+        // extra injection on movement
         if (pointer.moved) {
           const fx = pointer.vx / Math.max(1e-4, dt);
           const fy = pointer.vy / Math.max(1e-4, dt);
@@ -594,7 +603,7 @@
     // set initial vars
     setMaskVars(pointer.x, pointer.y, performance.now() * 0.001);
 
-    // Prefer WebGL2, but if it fails, fallback to 2D
+    // Prefer WebGL2, fallback to 2D if anything fails
     const ok = runWebGL2(canvas);
     if (!ok) run2D(canvas);
   }
