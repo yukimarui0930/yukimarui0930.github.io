@@ -66,19 +66,21 @@
       // ============
       // Tuning (floaty / zero-gravity)
       // ============
-      // Smaller k = less "snappy"
-      // Higher damp = more inertia / drifting
-      var k = 0.065; // spring strength
-      var damp = 0.95; // damping (higher = smoother/slower)
-      var driftAmt = 0.065; // base organic drift amount
-      var targetSmooth = 0.045; // smaller = floatier target, bigger = more responsive
+      // NOTE:
+      // - k: spring strength (higher = faster follow)
+      // - damp: velocity damping (0..1 typical; closer to 1 = longer glide)
+      // - targetSmooth: smoothing of pointer target itself (higher = more responsive)
+      var k = 0.06; // ↑ faster follow than 0.035
+      var damp = 0.88; // ↓ quicker settle than 1.03 (and avoids runaway)
+      var driftAmt = 0.055; // slightly reduced drift (keep focus on cursor follow)
+      var targetSmooth = 0.085; // ↑ faster cursor responsiveness
 
       // Reduced motion: still animate but subtle
       if (isReduced) {
-        k = 0.02;
-        damp = 0.75;
-        driftAmt = 0.015;
-        targetSmooth = 0.03;
+        k = 0.03;
+        damp = 0.9;
+        driftAmt = 0.01;
+        targetSmooth = 0.055;
         document.documentElement.setAttribute(
           "data-bg-glow",
           "animating-reduced"
@@ -138,11 +140,11 @@
         var x1 = x + driftX;
         var y1 = y + driftY;
 
-        var x2 = x + Math.sin(s * 1.3 + 2.0) * (isReduced ? 0.06 : 0.10);
-        var y2 = y + Math.cos(s * 1.1 + 2.4) * (isReduced ? 0.06 : 0.10);
+        var x2 = x + Math.sin(s * 1.3 + 2.0) * (isReduced ? 0.06 : 0.1);
+        var y2 = y + Math.cos(s * 1.1 + 2.4) * (isReduced ? 0.06 : 0.1);
 
-        var x3 = x + Math.sin(s * 0.7 + 0.4) * (isReduced ? 0.10 : 0.16);
-        var y3 = y + Math.cos(s * 0.6 + 0.9) * (isReduced ? 0.10 : 0.16);
+        var x3 = x + Math.sin(s * 0.7 + 0.4) * (isReduced ? 0.1 : 0.16);
+        var y3 = y + Math.cos(s * 0.6 + 0.9) * (isReduced ? 0.1 : 0.16);
 
         root.setProperty("--bgx1", (x1 * 100).toFixed(2) + "%");
         root.setProperty("--bgy1", (y1 * 100).toFixed(2) + "%");
