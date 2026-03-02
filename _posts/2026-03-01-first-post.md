@@ -13,7 +13,15 @@ To see a world in a grain of sand<br>
 And a heaven in a wild flower,<br>
 Hold infinity in the palm of your hand<br>
 And eternity in an hour.<br>
+
+ひとつぶの砂に、全世界を見て  
+一輪の花に、天国を見る  
+無限をその掌に受け止め、  
+一時に永遠を感じる  
+ 
  <br>
+
+ 
 A robin redbreast in a cage<br>
 Puts all Heaven in a rage.<br>
 A dove house fill'd with doves and pigeons<br>
