@@ -350,7 +350,7 @@ function setMaskVars(px01, py01, tSec) {
         vec3 col = mix(base, warm, smoothstep(0.15, 0.95, t)) * t;
 
         // keep it behind the pattern; subtle
-        float alpha = clamp(t * 0.45, 0.0, 0.45);
+        float alpha = clamp(t * 1, 0.0, 1);
         o = vec4(col, alpha);
       }`;
 
