@@ -4,7 +4,7 @@
 @import "minima";
 
 /* =======================================
-   Design tokens + mask control points
+   Design tokens
    ======================================= */
 :root{
   --bg: #fff !important;
@@ -13,11 +13,14 @@
   --line: rgba(17,17,17,.10);
   --max: 820px;
 }
+
 /* =======================================
    Base
    ======================================= */
 html{
   background: var(--bg);
+  /* スクロールバー有無でレイアウトが微妙に動くのを防ぐ（任意だけど推奨） */
+  scrollbar-gutter: stable;
 }
 
 body{
@@ -31,7 +34,7 @@ body{
 
   color: var(--text);
 
-  /* 背景レイヤー(canvas/SVG)を見せるため */
+  /* 背景(canvas)を見せるため body は透明（html が白） */
   background: transparent;
 
   font-size: 16px;
@@ -135,7 +138,7 @@ p{ margin-bottom: 18px; }
   font-weight: 200;
 }
 
-/* リンク */
+/* Links */
 a{
   color:#000 !important;
   text-decoration: none;
@@ -204,25 +207,44 @@ pre{
 }
 
 /* =======================================
-   Background layers (final)
-   fluid(z0) < pattern(z1) < content(z2)
+   Background layer (fluid only)
+   - コンテンツ側は position をいじらない
+   - 背景側を z-index:-1 に落として「常に背面」に固定
    ======================================= */
 
-/* fluid layer (bg-fluid.js が生成) */
-#bg-fluid-canvas{
+/* 背景用ルート（bg-fluid-three.js が作る想定。無くてもOK） */
+#bg-fluid-root{
   position: fixed !important;
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
   pointer-events: none !important;
-  z-index: 0 !important;
+
+  /* これが肝：常に最背面へ */
+  z-index: -1 !important;
+
+  overflow: hidden !important;
 }
 
+/* fluid canvas */
+#bg-fluid-canvas{
+  position: fixed !important; /* rootに入っていても保険でfixed */
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none !important;
 
-/* content layer */
-.site-header,
-.page-content,
-.site-footer{
-  position: relative !important;
-  z-index: 2 !important;
+  /* これも最背面へ */
+  z-index: -1 !important;
+
+  display: block !important;
+}
+
+/* =======================================
+   Kill any GUI overlays (保険)
+   ======================================= */
+.dg, .dg.ac, .lil-gui, .lil-gui.root, #gui{
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
