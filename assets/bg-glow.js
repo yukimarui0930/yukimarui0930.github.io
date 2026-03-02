@@ -69,14 +69,14 @@
       // Smaller k = less "snappy"
       // Higher damp = more inertia / drifting
       var k = 0.035; // spring strength
-      var damp = 1.93; // damping (higher = smoother/slower)
-      var driftAmt = 0.035; // base organic drift amount
+      var damp = 1.03; // damping (higher = smoother/slower)
+      var driftAmt = 0.065; // base organic drift amount
       var targetSmooth = 0.045; // smaller = floatier target, bigger = more responsive
 
       // Reduced motion: still animate but subtle
       if (isReduced) {
         k = 0.02;
-        damp = 0.95;
+        damp = 0.75;
         driftAmt = 0.015;
         targetSmooth = 0.03;
         document.documentElement.setAttribute(
