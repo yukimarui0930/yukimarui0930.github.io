@@ -8,7 +8,7 @@
    ======================================= */
 :root{
   --bg: #fff !important;
-  --text: #111;
+  --text: #fff;
   --muted: rgba(17,17,17,.55);
   --line: rgba(17,17,17,.10);
   --max: 820px;
@@ -140,12 +140,12 @@ p{ margin-bottom: 18px; }
 
 /* Links */
 a{
-  color:#000 !important;
+  color:#fff !important;
   text-decoration: none;
   border-bottom: 0;
 }
 a:visited{
-  color:#000 !important;
+  color:#fff !important;
   text-decoration: none;
   border-bottom: 0;
 }
